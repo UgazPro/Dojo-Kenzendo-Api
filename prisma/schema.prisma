@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Dojos {
+  id             Int              @id @default(autoincrement())
+  dojo           String
+  address        String
+  location       String
+  code           String
+  martialArts    Int[]
+  Activities     Activities[]
+  DojoAttendance DojoAttendance[]
+  PaymentMethods PaymentMethods[]
+  Schedules      Schedules[]
+  Users          Users[]
+}
+
+model Schedules {
+  id           Int         @id @default(autoincrement())
+  dojoId       Int
+  day          String
+  startTime    DateTime
+  endTime      DateTime
+  martialArtId Int
+  dojo         Dojos       @relation(fields: [dojoId], references: [id])
+  martialArts  MartialArts @relation(fields: [martialArtId], references: [id])
+}
+
+model MartialArts {
+  id              Int               @id @default(autoincrement())
+  martialArt      String
+  AppliedStudents AppliedStudents[]
+  Exams           Exams[]
+  Ranks           Ranks[]
+  Schedules       Schedules[]
+}
+
+model Users {
+  id                 Int                  @id @default(autoincrement())
+  identification     String
+  name               String
+  lastName           String
+  password           String
+  email              String
+  username           String
+  address            String
+  phone              String
+  dojoId             Int
+  rolId              Int
+  birthday           DateTime
+  profileImg         String
+  active             Boolean
+  deleted            Boolean
+  createdAt          DateTime             @default(now())
+  enrollmentDate     DateTime
+  activityAttendance ActivityAttendance[]
+  AppliedStudents    AppliedStudents[]
+  DojoAttendance     DojoAttendance[]
+  Exams              Exams[]
+  Payments           Payments[]
+  representedUsers   Representatives[]    @relation("Representative")
+  student            Representatives[]    @relation("Students")
+  dojo               Dojos                @relation(fields: [dojoId], references: [id])
+  rol                Roles                @relation(fields: [rolId], references: [id])
+}
+
+model Representatives {
+  id               Int   @id @default(autoincrement())
+  representativeId Int
+  studentId        Int
+  representative   Users @relation("Representative", fields: [representativeId], references: [id])
+  student          Users @relation("Students", fields: [studentId], references: [id])
+}
+
+model Roles {
+  id    Int     @id @default(autoincrement())
+  rol   String
+  Users Users[]
+}
+
+model Activities {
+  id                 Int                  @id @default(autoincrement())
+  activityName       String
+  activityDate       DateTime
+  createdDate        DateTime
+  activityTime       DateTime
+  activityPlace      String
+  activityLocation   String
+  dojoId             Int
+  dojo               Dojos                @relation(fields: [dojoId], references: [id])
+  activityAttendance ActivityAttendance[]
+  AppliedStudents    AppliedStudents[]
+  Exams              Exams[]
+}
+
+model ActivityAttendance {
+  id         Int        @id @default(autoincrement())
+  activityId Int
+  userId     Int
+  activity   Activities @relation(fields: [activityId], references: [id])
+  user       Users      @relation(fields: [userId], references: [id])
+}
+
+model DojoAttendance {
+  id              Int      @id @default(autoincrement())
+  dojoId          Int
+  userId          Int
+  date_attendance DateTime
+  time_attendance DateTime
+  dojo            Dojos    @relation(fields: [dojoId], references: [id])
+  user            Users    @relation(fields: [userId], references: [id])
+}
+
+model Exams {
+  id           Int         @id @default(autoincrement())
+  martialArtId Int
+  userId       Int
+  ranksId      Int
+  activityId   Int
+  activity     Activities  @relation(fields: [activityId], references: [id])
+  martialArt   MartialArts @relation(fields: [martialArtId], references: [id])
+  ranks        Ranks       @relation(fields: [ranksId], references: [id])
+  user         Users       @relation(fields: [userId], references: [id])
+}
+
+model AppliedStudents {
+  id           Int         @id @default(autoincrement())
+  martialArtId Int
+  userId       Int
+  ranksId      Int
+  activityId   Int
+  activity     Activities  @relation(fields: [activityId], references: [id])
+  martialArt   MartialArts @relation(fields: [martialArtId], references: [id])
+  ranks        Ranks       @relation(fields: [ranksId], references: [id])
+  user         Users       @relation(fields: [userId], references: [id])
+}
+
+model Ranks {
+  id              Int               @id @default(autoincrement())
+  code            String
+  rank_name       String
+  belt            String
+  icon            String
+  martialArtId    Int
+  AppliedStudents AppliedStudents[]
+  Exams           Exams[]
+  martialArt      MartialArts       @relation(fields: [martialArtId], references: [id])
+}
+
+model PaymentMethods {
+  id             Int        @id @default(autoincrement())
+  payment_method String
+  bank           String
+  phone          String
+  email          String
+  identification String
+  dojoId         Int
+  dojo           Dojos      @relation(fields: [dojoId], references: [id])
+  Payments       Payments[]
+}
+
+model Payments {
+  id              Int            @id @default(autoincrement())
+  userId          Int
+  paymentMethodId Int
+  amount          Int
+  payment_date    DateTime
+  paymentMethod   PaymentMethods @relation(fields: [paymentMethodId], references: [id])
+  user            Users          @relation(fields: [userId], references: [id])
+}
