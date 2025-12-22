@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { LoginDTO, ResponseLogin } from './auth.dto';
 import * as jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
-import { badResponse, baseResponse } from 'src/utilities/base.dto';
+import { badResponse, baseResponse } from '../utilities/base.dto';
 
 @Injectable()
 export class AuthService {

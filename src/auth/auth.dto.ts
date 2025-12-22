@@ -1,5 +1,5 @@
 import { IsString } from "class-validator";
-import { DtoBaseResponse } from "src/utilities/base.dto";
+import { DtoBaseResponse } from "../utilities/base.dto";
 
 export class LoginDTO {
     @IsString()
