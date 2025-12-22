@@ -8,8 +8,8 @@ import { badResponse, baseResponse } from '../utilities/base.dto';
 @Injectable()
 export class AuthService {
   constructor(
-    private prismaService: PrismaService,
-    private configService: ConfigService,
+    private readonly prismaService: PrismaService,
+    private readonly configService: ConfigService,
   ) {}
 
   async login(credentials: LoginDTO) {
