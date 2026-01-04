@@ -96,6 +96,7 @@ model Activities {
   activityPlace      String
   activityLocation   String
   dojoId             Int
+  //Agregar multiples dojos para actividades generales
   dojo               Dojos                @relation(fields: [dojoId], references: [id])
   activityAttendance ActivityAttendance[]
   AppliedStudents    AppliedStudents[]

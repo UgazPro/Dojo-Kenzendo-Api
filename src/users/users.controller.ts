@@ -12,6 +12,11 @@ export class UsersController {
         return await this.userService.getAllUsers();
     }
 
+    @Get('/roles')
+    async getRoles() {
+        return await this.userService.getRoles();
+    }
+
     @Post()
     async createUser(@Body() user : UsersDTO) {
         return await this.userService.createUser(user);

@@ -18,10 +18,23 @@ export class UsersService {
                     rol: true,
                     dojo: true,
                 },
+                where: {
+                    deleted: false,
+                }
             });
             return users;
         } catch (error) {
             badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async getRoles() {
+        try {
+            const roles = await this.prismaService.roles.findMany();
+            return roles;
+        } catch (err){
+            badResponse.message = err.message;
             return badResponse;
         }
     }

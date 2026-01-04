@@ -21,8 +21,10 @@ export class MainLoadService {
         await this.prismaService.roles.createMany({
             data: [
                 { rol: 'Administrador', },
+                { rol: 'Líder Instructor', },
                 { rol: 'Instructor', },
                 { rol: 'Estudiante', },
+                { rol: 'Representante', },
             ],
         });
 
@@ -38,14 +40,43 @@ export class MainLoadService {
                 { code: 'K03', rank_name: 'Sendoin', belt: 'Marron', icon: 'white-belt.png', martialArtId: 1 },
                 { code: 'K02', rank_name: 'Sendoin', belt: 'Marron Punta Negra', icon: 'white-belt.png', martialArtId: 1 },
                 { code: 'K01', rank_name: 'Sendoin', belt: 'Marron Raya Negra', icon: 'white-belt.png', martialArtId: 1 },
-                { code: 'K00', rank_name: 'Shidoin', belt: 'Blanco', icon: 'white-belt.png', martialArtId: 1 },
+                { code: 'K00', rank_name: 'Shidoin', belt: 'Negro', icon: 'black-belt.png', martialArtId: 1 },
+                { code: 'D01', rank_name: 'Shidoin', belt: 'Negro', icon: 'black-belt.png', martialArtId: 1 },
+                { code: 'D02', rank_name: 'Shidoin', belt: 'Negro', icon: 'black-belt.png', martialArtId: 1 },
+                { code: 'D03', rank_name: 'Shihandai', belt: 'Negro', icon: 'black-belt.png', martialArtId: 1 },
+                { code: 'D04', rank_name: 'Junshihan', belt: 'Negro', icon: 'black-belt.png', martialArtId: 1 },
+                { code: 'D05', rank_name: 'Shihan', belt: 'Negro', icon: 'black-belt.png', martialArtId: 1 },
+                { code: 'D06', rank_name: 'Renshi', belt: 'Negro', icon: 'black-belt.png', martialArtId: 1 },
+                { code: 'D07', rank_name: 'Kyoshi', belt: 'Negro', icon: 'black-belt.png', martialArtId: 1 },
+
+                //Kobudo
+                { code: 'K11', rank_name: '', belt: 'Blanco', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K10', rank_name: '', belt: 'Blanco Punta Amarillo', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K09', rank_name: '', belt: 'Blanco Raya Amarillo', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K08', rank_name: '', belt: 'Amarillo', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K07', rank_name: '', belt: 'Naranja', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K06', rank_name: 'Senpai', belt: 'Verde', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K05', rank_name: 'Senpai', belt: 'Azul', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K04', rank_name: 'Senpai', belt: 'Morado', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K03', rank_name: 'Sendoin', belt: 'Marron', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K02', rank_name: 'Sendoin', belt: 'Marron Punta Negra', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K01', rank_name: 'Sendoin', belt: 'Marron Raya Negra', icon: 'white-belt.png', martialArtId: 2 },
+                { code: 'K00', rank_name: 'Shidoin', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
+                { code: 'D01', rank_name: 'Shidoin', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
+                { code: 'D02', rank_name: 'Shidoin', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
+                { code: 'D03', rank_name: 'Shihandai', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
+                { code: 'D04', rank_name: 'Junshihan', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
+                { code: 'D05', rank_name: 'Shihan', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
+                { code: 'D06', rank_name: 'Renshi', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
+                { code: 'D07', rank_name: 'Kyoshi', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
             ],
         });
 
         await this.prismaService.dojos.createMany({
             data: [
-                { dojo: 'Dojo Kenzendo', address: '123 Main St', location: '', code: '', martialArts: [1, 2] },
-                { dojo: 'Dojo Okikonbukan', address: '456 Elm St', location: '', code: '', martialArts: [1, 2, 3] },
+                { dojo: 'Dojo Kenzendo', address: '123 Main St', location: '', code: 'KZD', martialArts: [1, 2] },
+                { dojo: 'Dojo Okikonbukan', address: '456 Elm St', location: '', code: 'OKB', martialArts: [1, 2, 3] },
+                { dojo: 'Dojo Okinawakan', address: '456 Elm St', location: '', code: 'OKK', martialArts: [1, 2, 3] },
             ],
         });
 
