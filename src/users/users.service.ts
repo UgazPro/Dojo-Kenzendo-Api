@@ -14,6 +14,7 @@ export class UsersService {
 
     async getUsers(
         dojoId?: string,
+        userId?: string,
         search?: string,
         deleted?: boolean,
     ) {
@@ -21,6 +22,10 @@ export class UsersService {
 
         if (dojoId) {
             where.dojoId = Number(dojoId);
+        }
+
+        if (userId) {
+            where.id = Number(userId);
         }
 
         if (search) {

@@ -10,10 +10,11 @@ export class UsersController {
     @Get()
     async getUsers(
         @Query('dojoId') dojoId: string,
+        @Query('userId') userId: string,
         @Query('search') search: string,
         @Query('deleted') deleted: string,
     ) {
-        return await this.userService.getUsers(dojoId, search, deleted === 'true');
+        return await this.userService.getUsers(dojoId, userId, search, deleted === 'true');
     }
 
     @Get('/roles')
