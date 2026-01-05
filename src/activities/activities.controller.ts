@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
-import { ActivityDto, ActivityFilterDto, AppliedStudentDto, ExamDto, MarkActivityAttendanceDto } from './activities.dto';
+import { ActivityDto, ActivityFilterDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
 
 @Controller('activities')
 export class ActivitiesController {
@@ -20,6 +20,11 @@ export class ActivitiesController {
         if (place) filters.place = place;
         if (name) filters.name = name;
         return this.activitiesService.getActivities(filters);
+    }
+
+    @Get('/current')
+    getCurrentActivity(@Query('dojoId') dojoId?: string) {
+        return this.activitiesService.getCurrentActivity(dojoId ? Number(dojoId) : undefined);
     }
 
     @Post()
@@ -61,7 +66,7 @@ export class ActivitiesController {
     }
 
     @Post('/exams')
-    createExam(@Body() exam: ExamDto) {
+    createExam(@Body() exam: ExamStudentsDto) {
         return this.activitiesService.createExam(exam);
     }
 

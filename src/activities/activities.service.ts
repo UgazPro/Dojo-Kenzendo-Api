@@ -1,12 +1,12 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { ActivityDto, ActivityFilterDto, AppliedStudentDto, ExamDto, MarkActivityAttendanceDto } from './activities.dto';
+import { ActivityDto, ActivityFilterDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
 
 @Injectable()
 export class ActivitiesService {
     constructor(private readonly prismaService: PrismaService) {
-        
+
     }
 
     async getActivities(filters: ActivityFilterDto) {
@@ -54,6 +54,49 @@ export class ActivitiesService {
                 }
             });
             return activities;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async getCurrentActivity(dojoId?: number) {
+        const now = new Date();
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(now);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const where: any = {
+            date: {
+                gte: startOfDay,
+                lte: endOfDay,
+            },
+        };
+
+        if (dojoId) {
+            where.OR = [
+                { dojosId: dojoId },
+                { ActivityDojos: { some: { dojoId } } },
+            ];
+        }
+
+        try {
+            const activity = await this.prismaService.activities.findFirst({
+                where,
+                orderBy: { date: 'asc' },
+                include: {
+                    ActivityDojos: {
+                        include: {
+                            dojo: {
+                                select: { id: true, dojo: true, address: true },
+                            }
+                        }
+                    },
+                    dojos: true,
+                }
+            });
+            return activity;
         } catch (error) {
             badResponse.message = error.message;
             return badResponse;
@@ -232,15 +275,15 @@ export class ActivitiesService {
         }
     }
 
-    async createExam(exam: ExamDto) {
+    async createExam(exam: ExamStudentsDto) {
         try {
-            const created = await this.prismaService.exams.create({
-                data: {
-                    martialArtId: exam.martialArtId,
-                    userId: exam.userId,
-                    ranksId: exam.ranksId,
-                    activityId: exam.activityId,
-                }
+            const created = await this.prismaService.exams.createMany({
+                data: exam.exams.map(item => ({
+                    martialArtId: item.martialArtId,
+                    userId: item.userId,
+                    ranksId: item.ranksId,
+                    activityId: item.activityId,
+                }))
             });
 
             baseResponse.data = created;
