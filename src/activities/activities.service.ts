@@ -1,0 +1,346 @@
+import { PrismaService } from '@/prisma/prisma.service';
+import { Injectable } from '@nestjs/common';
+import { ActivityDto, ActivityFilterDto, AppliedStudentDto, ExamDto, MarkActivityAttendanceDto } from './activities.dto';
+import { badResponse, baseResponse } from '@/utilities/base.dto';
+
+@Injectable()
+export class ActivitiesService {
+    constructor(private readonly prismaService: PrismaService) {
+        
+    }
+
+    async getActivities(filters: ActivityFilterDto) {
+        const where: any = {};
+
+        if (filters?.dojoId) {
+            where.OR = [
+                { dojosId: filters.dojoId },
+                { ActivityDojos: { some: { dojoId: filters.dojoId } } },
+            ];
+        }
+
+        if (filters?.date) {
+            const start = new Date(filters.date);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(filters.date);
+            end.setHours(23, 59, 59, 999);
+            where.date = { gte: start, lte: end };
+        }
+
+        if (filters?.place) {
+            where.place = { contains: filters.place, mode: 'insensitive' };
+        }
+
+        if (filters?.name) {
+            where.name = { contains: filters.name, mode: 'insensitive' };
+        }
+
+        try {
+            const activities = await this.prismaService.activities.findMany({
+                where,
+                include: {
+                    ActivityDojos: {
+                        include: {
+                            dojo: {
+                                select: {
+                                    id: true,
+                                    dojo: true,
+                                    address: true,
+                                }
+                            }
+                        }
+                    },
+                    dojos: true,
+                }
+            });
+            return activities;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async createActivity(activity: ActivityDto) {
+        const today = new Date();
+        const minDate = new Date();
+        minDate.setDate(today.getDate() + 7);
+
+        if (activity.date < minDate) {
+            badResponse.message = 'La fecha debe ser al menos 7 días después de hoy';
+            return badResponse;
+        }
+
+        try {
+            const created = await this.prismaService.activities.create({
+                data: {
+                    name: activity.name,
+                    date: activity.date,
+                    place: activity.place,
+                    latitude: activity.latitude,
+                    longitude: activity.longitude,
+                    dojosId: activity.dojosId ?? null,
+                }
+            });
+
+            if (activity.dojoIds?.length) {
+                await this.prismaService.activityDojos.createMany({
+                    data: activity.dojoIds.map(dojoId => ({
+                        dojoId,
+                        activityId: created.id,
+                    })),
+                    skipDuplicates: true,
+                });
+            }
+
+            const newActivity = await this.prismaService.activities.findUnique({
+                where: { id: created.id },
+                include: {
+                    ActivityDojos: true,
+                    dojos: true,
+                }
+            });
+
+            baseResponse.data = newActivity;
+            baseResponse.message = 'Actividad creada correctamente';
+            return baseResponse;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async updateActivity(id: number, activity: ActivityDto) {
+        const today = new Date();
+        const minDate = new Date();
+        minDate.setDate(today.getDate() + 7);
+
+        if (activity.date < minDate) {
+            badResponse.message = 'La fecha debe ser al menos 7 días después de hoy';
+            return badResponse;
+        }
+
+        try {
+            await this.prismaService.activities.update({
+                where: { id },
+                data: {
+                    name: activity.name,
+                    date: activity.date,
+                    place: activity.place,
+                    latitude: activity.latitude,
+                    longitude: activity.longitude,
+                    dojosId: activity.dojosId ?? null,
+                }
+            });
+
+            if (activity.dojoIds) {
+                await this.prismaService.activityDojos.deleteMany({ where: { activityId: id } });
+                if (activity.dojoIds.length) {
+                    await this.prismaService.activityDojos.createMany({
+                        data: activity.dojoIds.map(dojoId => ({ dojoId, activityId: id })),
+                        skipDuplicates: true,
+                    });
+                }
+            }
+
+            const updated = await this.prismaService.activities.findUnique({
+                where: { id },
+                include: {
+                    ActivityDojos: true,
+                    dojos: true,
+                }
+            });
+
+            baseResponse.data = updated;
+            baseResponse.message = 'Actividad actualizada correctamente';
+            return baseResponse;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async getActivityAttendance(activityId: number) {
+        try {
+            const attendance = await this.prismaService.activityAttendance.findMany({
+                where: { activityId },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            lastName: true,
+                            identification: true,
+                        }
+                    }
+                }
+            });
+            return attendance;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async markActivityAttendance(data: MarkActivityAttendanceDto) {
+        try {
+            const records = data.userIds.map(userId => ({
+                activityId: data.activityId,
+                userId,
+            }));
+
+            const result = await this.prismaService.activityAttendance.createMany({
+                data: records,
+                skipDuplicates: true,
+            });
+
+            baseResponse.data = result;
+            baseResponse.message = 'Asistencia registrada correctamente';
+            return baseResponse;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async getExams(activityId?: number, userId?: number, martialArtId?: number) {
+        const where: any = {};
+
+        if (activityId) where.activityId = activityId;
+        if (userId) where.userId = userId;
+        if (martialArtId) where.martialArtId = martialArtId;
+
+        try {
+            const exams = await this.prismaService.exams.findMany({
+                where,
+                include: {
+                    activity: true,
+                    martialArt: true,
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            lastName: true,
+                        }
+                    },
+                    ranks: true,
+                }
+            });
+            return exams;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async createExam(exam: ExamDto) {
+        try {
+            const created = await this.prismaService.exams.create({
+                data: {
+                    martialArtId: exam.martialArtId,
+                    userId: exam.userId,
+                    ranksId: exam.ranksId,
+                    activityId: exam.activityId,
+                }
+            });
+
+            baseResponse.data = created;
+            baseResponse.message = 'Examen creado correctamente';
+            return baseResponse;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async updateExam(id: number, exam: ExamDto) {
+        try {
+            const updated = await this.prismaService.exams.update({
+                where: { id },
+                data: {
+                    martialArtId: exam.martialArtId,
+                    userId: exam.userId,
+                    ranksId: exam.ranksId,
+                    activityId: exam.activityId,
+                }
+            });
+
+            baseResponse.data = updated;
+            baseResponse.message = 'Examen actualizado correctamente';
+            return baseResponse;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async getAppliedStudents(activityId?: number, userId?: number, martialArtId?: number) {
+        const where: any = {};
+
+        if (activityId) where.activityId = activityId;
+        if (userId) where.userId = userId;
+        if (martialArtId) where.martialArtId = martialArtId;
+
+        try {
+            const applied = await this.prismaService.appliedStudents.findMany({
+                where,
+                include: {
+                    activity: true,
+                    martialArt: true,
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            lastName: true,
+                        }
+                    },
+                    ranks: true,
+                }
+            });
+            return applied;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async createAppliedStudent(data: AppliedStudentDto) {
+        try {
+            const created = await this.prismaService.appliedStudents.create({
+                data: {
+                    activityId: data.activityId,
+                    userId: data.userId,
+                    martialArtId: data.martialArtId,
+                    ranksId: data.ranksId,
+                }
+            });
+
+            baseResponse.data = created;
+            baseResponse.message = 'Postulación creada correctamente';
+            return baseResponse;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async updateAppliedStudent(id: number, data: AppliedStudentDto) {
+        try {
+            const updated = await this.prismaService.appliedStudents.update({
+                where: { id },
+                data: {
+                    activityId: data.activityId,
+                    userId: data.userId,
+                    martialArtId: data.martialArtId,
+                    ranksId: data.ranksId,
+                }
+            });
+
+            baseResponse.data = updated;
+            baseResponse.message = 'Postulación actualizada correctamente';
+            return baseResponse;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+}

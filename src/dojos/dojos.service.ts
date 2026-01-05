@@ -132,6 +132,51 @@ export class DojosService {
         });
     }
 
+    //Get class attendance status
+    async getClassAttendanceStatus(dojoId: number, scheduleId: number, date: Date) {
+        // 1. Obtener todos los alumnos que pertenecen a ese dojo
+        const allStudents = await this.prismaService.users.findMany({
+            where: { dojoId, rol: { rol: 'Estudiante' }, active: true },
+            select: { id: true, name: true, lastName: true }
+        });
+
+        // 2. Obtener los IDs de quienes marcaron asistencia ese día para ese horario
+        const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+
+        const attendance = await this.prismaService.dojoAttendance.findMany({
+            where: {
+                scheduleId,
+                attendanceDate: { gte: startOfDay, lte: endOfDay }
+            },
+            select: { userId: true }
+        });
+
+        const presentIds = attendance.map(a => a.userId);
+
+        // 3. Cruzar la información
+        return allStudents.map(student => ({
+            ...student,
+            status: presentIds.includes(student.id) ? 'Presente' : 'Ausente'
+        }));
+    }
+
+    //Get student attendance history
+    async getStudentAttendanceHistory(userId: number) {
+        return this.prismaService.dojoAttendance.findMany({
+            where: {
+                userId,
+            },
+            include: {
+                schedule: {
+                    include: { martialArts: true }
+                },
+                dojo: true
+            },
+            orderBy: { attendanceDate: 'desc' }
+        });
+    }
+
     async createScheduleDojo(schedule: ScheduleDojoDTO) {
         try {
             const newSchedule = await this.prismaService.schedules.createMany({

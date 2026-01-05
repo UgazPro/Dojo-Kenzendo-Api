@@ -156,13 +156,13 @@ model Roles {
 //--------------------//-------Activities-------//--------------------//
 
 model Activities {
-  id               Int      @id @default(autoincrement())
-  activityName     String
-  activityDate     DateTime
-  createdDate      DateTime @default(now())
-  activityTime     DateTime
-  activityPlace    String
-  activityLocation String
+  id          Int      @id @default(autoincrement())
+  name        String
+  date        DateTime
+  place       String
+  latitude    Float
+  longitude   Float
+  createdDate DateTime @default(now())
 
   // Relación con la tabla intermedia
   ActivityDojos ActivityDojos[]

@@ -8,6 +8,7 @@ import { MainLoadModule } from './main-load/main-load.module';
 import { ConfigModule } from '@nestjs/config';
 import { OrganizationModule } from './organization/organization.module';
 import { DojosModule } from './dojos/dojos.module';
+import { ActivitiesModule } from './activities/activities.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { DojosModule } from './dojos/dojos.module';
     }),
     OrganizationModule,
     DojosModule,
+    ActivitiesModule,
 
   ],
   controllers: [AppController],
