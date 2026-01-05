@@ -133,6 +133,8 @@ export class ActivitiesService {
                 }
             });
 
+            //Comentario
+
             if (activity.dojoIds?.length) {
                 await this.prismaService.activityDojos.createMany({
                     data: activity.dojoIds.map(dojoId => ({
