@@ -10,11 +10,15 @@ import { OrganizationModule } from './organization/organization.module';
 import { DojosModule } from './dojos/dojos.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { PaymentsModule } from './payments/payments.module';
+import { JwtService } from '@nestjs/jwt';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './guards/auth/auth.guard';
+import { RolesGuard } from './guards/roles/roles.guard';
 
 @Module({
   imports: [
-    AuthModule, 
-    UsersModule, 
+    AuthModule,
+    UsersModule,
     MainLoadModule,
     ConfigModule.forRoot({
       isGlobal: true,
@@ -27,6 +31,21 @@ import { PaymentsModule } from './payments/payments.module';
 
   ],
   controllers: [AppController],
-  providers: [AppService, PrismaService],
+  providers: [
+    AppService,
+    PrismaService,
+
+    //Validacion de JWT
+    // JwtService,
+
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: AuthGuard, // se ejecuta primero
+    // },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: RolesGuard, // se ejecuta después, depende del user ya autenticado
+    // },
+  ],
 })
 export class AppModule { }

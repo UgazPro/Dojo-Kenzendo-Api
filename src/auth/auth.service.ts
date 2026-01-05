@@ -11,12 +11,14 @@ import * as bcrypt from 'bcryptjs';
 export class AuthService {
   // Inicializamos el cliente de Google con el ID del proyecto
   private googleClient: OAuth2Client;
+  private secretKey: string;
 
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
   ) {
     this.googleClient = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'));
+    this.secretKey = this.configService.get<string>('JWT_SECRET_KEY') as string;
   }
 
   async authenticateWithGoogle(idToken: string) {
@@ -68,8 +70,7 @@ export class AuthService {
 
       let { password, ...user } = findUser;
 
-      const secretKey = this.configService.get<string>('JWT_SECRET_KEY');
-      const token = jwt.sign(user, secretKey, { expiresIn: '8h' });
+      const token = jwt.sign(user, this.secretKey, { expiresIn: '8h' });
 
       const responseLogin: ResponseLogin = {
         ...baseResponse,
@@ -129,8 +130,7 @@ export class AuthService {
 
       let { password, ...user } = findUser;
 
-      const secretKey = this.configService.get<string>('JWT_SECRET_KEY');
-      const token = jwt.sign(user, secretKey, { expiresIn: '8h' });
+      const token = jwt.sign(user, this.secretKey, { expiresIn: '8h' });
 
       const responseLogin: ResponseLogin = {
         ...baseResponse,
