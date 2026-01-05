@@ -1,14 +1,15 @@
 generator client {
-  provider        = "prisma-client"
-  output          = "../src/generated/prisma"
-  moduleFormat    = "cjs"
-  previewFeatures = ["driverAdapters"]
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+//--------------------//-------Dojo---------//--------------------//
 
 model Dojos {
   id              Int               @id @default(autoincrement())
@@ -36,18 +37,36 @@ model DojoMartialArts {
   @@unique([dojoId, martialArtId]) // Evita duplicados
 }
 
-model Schedules {
-  id           Int         @id @default(autoincrement())
-  dojoId       Int
-  name         String
-  description  String      @default("")
-  day          String
-  startTime    String
-  endTime      String
-  martialArtId Int
-  dojo         Dojos       @relation(fields: [dojoId], references: [id])
-  martialArts  MartialArts @relation(fields: [martialArtId], references: [id])
+model DojoAttendance {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  dojoId         Int
+  scheduleId     Int // <--- NUEVO: Relación directa con el horario
+  attendanceDate DateTime @default(now()) // Fecha y hora unificadas
+
+  // Relaciones
+  user     Users     @relation(fields: [userId], references: [id])
+  dojo     Dojos     @relation(fields: [dojoId], references: [id])
+  schedule Schedules @relation(fields: [scheduleId], references: [id])
+
+  @@index([attendanceDate]) // Índice para reportes semanales rápidos
 }
+
+model Schedules {
+  id              Int              @id @default(autoincrement())
+  dojoId          Int
+  name            String
+  description     String           @default("")
+  day             String
+  startTime       String
+  endTime         String
+  martialArtId    Int
+  dojo            Dojos            @relation(fields: [dojoId], references: [id])
+  martialArts     MartialArts      @relation(fields: [martialArtId], references: [id])
+  dojoAttendances DojoAttendance[]
+}
+
+//--------------------//------General-------//--------------------//
 
 model MartialArts {
   id              Int               @id @default(autoincrement())
@@ -60,6 +79,21 @@ model MartialArts {
   userRanks       UserRanks[]
   dojoMartialArts DojoMartialArts[]
 }
+
+model Ranks {
+  id              Int               @id @default(autoincrement())
+  code            String
+  rank_name       String
+  belt            String
+  icon            String
+  martialArtId    Int
+  AppliedStudents AppliedStudents[]
+  Exams           Exams[]
+  martialArt      MartialArts       @relation(fields: [martialArtId], references: [id])
+  userRanks       UserRanks[]
+}
+
+//--------------------//------Users/Students--------//--------------------//
 
 model Users {
   id                 Int                  @id @default(autoincrement())
@@ -119,6 +153,8 @@ model Roles {
   Users Users[]
 }
 
+//--------------------//-------Activities-------//--------------------//
+
 model Activities {
   id               Int      @id @default(autoincrement())
   activityName     String
@@ -160,16 +196,6 @@ model ActivityAttendance {
   user       Users      @relation(fields: [userId], references: [id])
 }
 
-model DojoAttendance {
-  id              Int      @id @default(autoincrement())
-  dojoId          Int
-  userId          Int
-  date_attendance DateTime
-  time_attendance DateTime
-  dojo            Dojos    @relation(fields: [dojoId], references: [id])
-  user            Users    @relation(fields: [userId], references: [id])
-}
-
 model Exams {
   id           Int         @id @default(autoincrement())
   martialArtId Int
@@ -194,18 +220,7 @@ model AppliedStudents {
   user         Users       @relation(fields: [userId], references: [id])
 }
 
-model Ranks {
-  id              Int               @id @default(autoincrement())
-  code            String
-  rank_name       String
-  belt            String
-  icon            String
-  martialArtId    Int
-  AppliedStudents AppliedStudents[]
-  Exams           Exams[]
-  martialArt      MartialArts       @relation(fields: [martialArtId], references: [id])
-  userRanks       UserRanks[]
-}
+//--------------------//------Payments-------//--------------------//
 
 model PaymentMethods {
   id             Int        @id @default(autoincrement())

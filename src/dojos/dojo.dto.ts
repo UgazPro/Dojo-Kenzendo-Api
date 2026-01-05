@@ -1,5 +1,5 @@
-import { Type } from "class-transformer";
-import { IsArray, IsNumber, IsString, Max, Min, ValidateNested } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { IsArray, IsDate, IsNumber, IsString, Max, Min, ValidateNested } from "class-validator";
 
 export class DojoDto {
     @IsString()
@@ -44,4 +44,28 @@ export class ScheduleDTO {
     endTime: string;
     @IsNumber()
     martialArtId: number;
+}
+
+//Attendance
+
+export class AttendanceFilter {
+    @IsNumber()
+    dojoId: number;
+    @IsDate()
+    @Transform(({ value }) => new Date(value))
+    startOfWeek: Date;
+    @IsDate()
+    @Transform(({ value }) => new Date(value))
+    endOfWeek: Date;
+}
+export class MarkAttendanceDto {
+    @IsNumber()
+    dojoId: number;
+
+    @IsNumber()
+    scheduleId: number; // El ID del horario detectado o seleccionado
+
+    @IsArray()
+    @IsNumber({}, { each: true })
+    userIds: number[]; // Lista de IDs de alumnos presentes
 }

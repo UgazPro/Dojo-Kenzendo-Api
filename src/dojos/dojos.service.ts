@@ -1,6 +1,6 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { DojoDto, ScheduleDojoDTO } from './dojo.dto';
+import { AttendanceFilter, DojoDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
 
 @Injectable()
@@ -26,6 +26,29 @@ export class DojosService {
         return await this.prismaService.dojos.findMany({
             where
         });
+    }
+
+    async getAttendanceDojo(attendanceDojo: AttendanceFilter) {
+        try {
+            const report = await this.prismaService.dojoAttendance.groupBy({
+                by: ['scheduleId'],
+                _count: {
+                    userId: true, // Cuenta los alumnos
+                },
+                where: {
+                    attendanceDate: {
+                        gte: attendanceDojo.startOfWeek, // Fecha de inicio de semana
+                        lte: attendanceDojo.endOfWeek,   // Fecha de fin de semana
+                    },
+                    dojoId: attendanceDojo.dojoId,
+                },
+            });
+            return report;
+        }
+        catch (err) {
+            badResponse.message = 'Error al generar el reporte de asistencia';
+            return badResponse;
+        }
     }
 
     async createDojo(dojoData: DojoDto) {
@@ -88,6 +111,8 @@ export class DojosService {
             return badResponse;
         }
     }
+
+    //Schedules
 
     async getScheduleDojo(dojoId?: string) {
         const where: any = {};
@@ -169,5 +194,54 @@ export class DojosService {
         }
     }
 
+
+    //Attendance
+
+    // 1. Lógica para detectar el horario actual del Dojo
+    async getCurrentSchedule(dojoId: number) {
+        const now = new Date();
+        const days = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+        const currentDay = days[now.getDay()];
+
+        // Formato HH:mm para comparar con tus strings de Schedules
+        const currentTime = now.toLocaleTimeString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+
+        // Buscamos si hay una clase ocurriendo ahora en ese dojo
+        const schedule = await this.prismaService.schedules.findFirst({
+            where: {
+                dojoId,
+                day: currentDay,
+                startTime: { lte: currentTime },
+                endTime: { gte: currentTime },
+            },
+            include: { martialArts: true }
+        });
+
+        return schedule;
+    }
+
+    // 2. Registrar la asistencia masiva
+    async markBulkAttendance(data: MarkAttendanceDto) {
+        const { dojoId, scheduleId, userIds } = data;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalizamos a inicio del día para evitar duplicados diarios
+
+        // Creamos los registros en una transacción de base de datos
+        const attendanceRecords = userIds.map(userId => ({
+            userId,
+            dojoId,
+            scheduleId,
+            attendanceDate: new Date(), // Fecha y hora exacta del marcado
+        }));
+
+        return this.prismaService.dojoAttendance.createMany({
+            data: attendanceRecords,
+            skipDuplicates: true, // Evita errores si el maestro le da clic dos veces
+        });
+    }
 
 }

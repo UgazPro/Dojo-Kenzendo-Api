@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
 import { DojosService } from './dojos.service';
-import { DojoDto, ScheduleDojoDTO } from './dojo.dto';
+import { AttendanceFilter, DojoDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
 
 @Controller('dojos')
 export class DojosController {
@@ -45,5 +45,24 @@ export class DojosController {
     @Delete('/schedules/:id')
     deleteScheduleDojo(@Param('id', ParseIntPipe) id: number) {
         return this.dojosService.deleteScheduleDojo(id);
+    }
+
+    //Attendance
+
+    @Post('/attendance')
+    async getAttendanceDojo(@Body() attendanceDojo: AttendanceFilter) {
+        return await this.dojosService.getAttendanceDojo(attendanceDojo);
+    }
+
+    @Get('/attendance/current-class/:dojoId')
+    async getCurrentClass(@Param('dojoId') dojoId: string) {
+        const schedule = await this.dojosService.getCurrentSchedule(+dojoId);
+        if (!schedule) throw new BadRequestException('No hay clases activas en este momento');
+        return schedule;
+    }
+
+    @Post('/attendance/mark')
+    async mark(@Body() markAttendanceDto: MarkAttendanceDto) {
+        return this.dojosService.markBulkAttendance(markAttendanceDto);
     }
 }
