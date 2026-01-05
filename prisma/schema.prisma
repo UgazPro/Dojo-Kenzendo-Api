@@ -51,15 +51,23 @@ model DojoAttendance {
   id             Int      @id @default(autoincrement())
   userId         Int
   dojoId         Int
-  scheduleId     Int // <--- NUEVO: Relación directa con el horario
-  attendanceDate DateTime @default(now()) // Fecha y hora unificadas
+  scheduleId     Int
+  attendanceDate DateTime @default(now())
 
   // Relaciones
   user     Users     @relation(fields: [userId], references: [id])
   dojo     Dojos     @relation(fields: [dojoId], references: [id])
   schedule Schedules @relation(fields: [scheduleId], references: [id])
 
-  @@index([attendanceDate]) // Índice para reportes semanales rápidos
+  // --- ÍNDICES OPTIMIZADOS ---
+
+  // 1. Optimiza: Ver el historial de UN alumno (del más reciente al más antiguo)
+  @@index([userId, attendanceDate(sort: Desc)])
+  // 2. Optimiza: Ver la asistencia de UNA clase específica en una fecha
+  @@index([scheduleId, attendanceDate])
+  // 3. Optimiza: Reportes globales de TODO el dojo por rango de fechas
+  // Al poner la fecha primero, este índice reemplaza al que borramos.
+  @@index([dojoId, attendanceDate])
 }
 
 model Schedules {
