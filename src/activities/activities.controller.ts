@@ -10,15 +10,19 @@ export class ActivitiesController {
     @Get()
     getActivities(
         @Query('dojoId') dojoId?: string,
-        @Query('date') date?: string,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string,
         @Query('place') place?: string,
         @Query('name') name?: string,
+        @Query('includePast') includePast?: string,
     ) {
         const filters: ActivityFilterDto = {};
         if (dojoId) filters.dojoId = Number(dojoId);
-        if (date) filters.date = new Date(date);
+        if (startDate) filters.startDate = new Date(startDate);
+        if (endDate) filters.endDate = new Date(endDate);
         if (place) filters.place = place;
         if (name) filters.name = name;
+        if (includePast !== undefined) filters.includePast = includePast === 'true';
         return this.activitiesService.getActivities(filters);
     }
 

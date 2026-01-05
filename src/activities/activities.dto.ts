@@ -7,9 +7,17 @@ export class ActivityFilterDto {
     dojoId?: number;
 
     @IsOptional()
+    @Transform(({ value }) => value === 'true' || value === true)
+    includePast?: boolean;
+
+    @IsOptional()
     @IsDate()
     @Transform(({ value }) => value ? new Date(value) : undefined)
-    date?: Date;
+    startDate?: Date;
+    @IsOptional()
+    @IsDate()
+    @Transform(({ value }) => value ? new Date(value) : undefined)
+    endDate?: Date;
 
     @IsOptional()
     @IsString()

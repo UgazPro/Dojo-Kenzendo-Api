@@ -12,6 +12,13 @@ export class ActivitiesService {
     async getActivities(filters: ActivityFilterDto) {
         const where: any = {};
 
+        // Por defecto solo próximas (hoy en adelante) si no se pide historial
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (!filters?.includePast) {
+            where.date = { gte: today };
+        }
+
         if (filters?.dojoId) {
             where.OR = [
                 { dojosId: filters.dojoId },
@@ -19,10 +26,10 @@ export class ActivitiesService {
             ];
         }
 
-        if (filters?.date) {
-            const start = new Date(filters.date);
+        if (filters?.startDate && filters?.endDate) {
+            const start = new Date(filters.startDate);
             start.setHours(0, 0, 0, 0);
-            const end = new Date(filters.date);
+            const end = new Date(filters.endDate);
             end.setHours(23, 59, 59, 999);
             where.date = { gte: start, lte: end };
         }
