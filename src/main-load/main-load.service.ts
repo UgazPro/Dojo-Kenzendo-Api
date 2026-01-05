@@ -158,6 +158,81 @@ export class MainLoadService {
             ]
         });
 
+        // Actividades de ejemplo
+        const activitySeminar = await this.prismaService.activities.create({
+            data: {
+                name: 'Seminario Kata Avanzado',
+                date: new Date('2026-02-15T10:00:00Z'),
+                place: 'Dojo Kenzendo',
+                latitude: 10.6447,
+                longitude: -71.6104,
+                dojosId: 1,
+            }
+        });
+
+        const activityTournament = await this.prismaService.activities.create({
+            data: {
+                name: 'Torneo Regional',
+                date: new Date('2026-03-10T14:00:00Z'),
+                place: 'Polideportivo Maracaibo',
+                latitude: 10.6499,
+                longitude: -71.6120,
+                dojosId: 2,
+            }
+        });
+
+        const activityExamDay = await this.prismaService.activities.create({
+            data: {
+                name: 'Jornada de Exámenes',
+                date: new Date('2026-04-05T09:00:00Z'),
+                place: 'Dojo Okikonbukan',
+                latitude: 10.6447,
+                longitude: -71.6104,
+                dojosId: 2,
+            }
+        });
+
+        await this.prismaService.activityDojos.createMany({
+            data: [
+                { activityId: activitySeminar.id, dojoId: 1 },
+                { activityId: activitySeminar.id, dojoId: 3 },
+                { activityId: activityTournament.id, dojoId: 2 },
+                { activityId: activityTournament.id, dojoId: 1 },
+                { activityId: activityExamDay.id, dojoId: 2 },
+            ],
+            skipDuplicates: true,
+        });
+
+        await this.prismaService.activityAttendance.createMany({
+            data: [
+                { activityId: activitySeminar.id, userId: 2 },
+                { activityId: activitySeminar.id, userId: 3 },
+                { activityId: activityTournament.id, userId: 1 },
+                { activityId: activityTournament.id, userId: 2 },
+            ],
+            skipDuplicates: true,
+        });
+
+        // Exámenes asociados a actividades (historial)
+        await this.prismaService.exams.createMany({
+            data: [
+                { martialArtId: 1, userId: 2, ranksId: 8, activityId: activityExamDay.id },
+                { martialArtId: 1, userId: 3, ranksId: 6, activityId: activityExamDay.id },
+                { martialArtId: 2, userId: 1, ranksId: 20, activityId: activityExamDay.id },
+            ],
+            skipDuplicates: true,
+        });
+
+        // Postulaciones a exámenes
+        await this.prismaService.appliedStudents.createMany({
+            data: [
+                { martialArtId: 1, userId: 2, ranksId: 8, activityId: activityExamDay.id },
+                { martialArtId: 1, userId: 3, ranksId: 6, activityId: activityExamDay.id },
+                { martialArtId: 2, userId: 1, ranksId: 20, activityId: activityExamDay.id },
+            ],
+            skipDuplicates: true,
+        });
+
         return {
             success: true,
             message: 'Datos iniciales cargados correctamente',
