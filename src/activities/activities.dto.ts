@@ -40,6 +40,9 @@ export class ActivityDto {
     place: string;
 
     @IsNumber()
+    price: number;
+
+    @IsNumber()
     @Min(-90)
     @Max(90)
     latitude: number;

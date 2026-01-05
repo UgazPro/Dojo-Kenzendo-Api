@@ -160,6 +160,7 @@ model Activities {
   name        String
   date        DateTime
   place       String
+  price       Float    @default(0)
   latitude    Float
   longitude   Float
   createdDate DateTime @default(now())

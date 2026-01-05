@@ -128,6 +128,7 @@ export class ActivitiesService {
                     place: activity.place,
                     latitude: activity.latitude,
                     longitude: activity.longitude,
+                    price: activity.price,
                     dojosId: activity.dojosId ?? null,
                 }
             });
