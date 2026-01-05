@@ -1,7 +1,7 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
-  moduleFormat = "cjs"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  moduleFormat    = "cjs"
   previewFeatures = ["driverAdapters"]
 }
 
@@ -22,14 +22,15 @@ model Dojos {
   PaymentMethods PaymentMethods[]
   Schedules      Schedules[]
   Users          Users[]
+  activityDojos  ActivityDojos[]
 }
 
 model Schedules {
   id           Int         @id @default(autoincrement())
   dojoId       Int
   day          String
-  startTime    DateTime
-  endTime      DateTime
+  startTime    String
+  endTime      String
   martialArtId Int
   dojo         Dojos       @relation(fields: [dojoId], references: [id])
   martialArts  MartialArts @relation(fields: [martialArtId], references: [id])
@@ -42,6 +43,7 @@ model MartialArts {
   Exams           Exams[]
   Ranks           Ranks[]
   Schedules       Schedules[]
+  userRanks       UserRanks[]
 }
 
 model Users {
@@ -54,6 +56,7 @@ model Users {
   username           String
   address            String
   phone              String
+  sex                String               @default("Masculino")
   dojoId             Int
   rolId              Int
   birthday           DateTime
@@ -71,6 +74,20 @@ model Users {
   student            Representatives[]    @relation("Students")
   dojo               Dojos                @relation(fields: [dojoId], references: [id])
   rol                Roles                @relation(fields: [rolId], references: [id])
+  userRanks          UserRanks[]
+}
+
+model UserRanks {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  martialArtId  Int
+  currentRankId Int // Apunta al último rango obtenido en esa arte
+  updatedAt     DateTime    @updatedAt
+  user          Users       @relation(fields: [userId], references: [id])
+  martialArt    MartialArts @relation(fields: [martialArtId], references: [id])
+  rank          Ranks       @relation(fields: [currentRankId], references: [id])
+
+  @@unique([userId, martialArtId]) // Un usuario solo tiene un registro por arte marcial
 }
 
 model Representatives {
@@ -88,19 +105,36 @@ model Roles {
 }
 
 model Activities {
-  id                 Int                  @id @default(autoincrement())
-  activityName       String
-  activityDate       DateTime
-  createdDate        DateTime
-  activityTime       DateTime
-  activityPlace      String
-  activityLocation   String
-  dojoId             Int
-  //Agregar multiples dojos para actividades generales
-  dojo               Dojos                @relation(fields: [dojoId], references: [id])
+  id               Int      @id @default(autoincrement())
+  activityName     String
+  activityDate     DateTime
+  createdDate      DateTime @default(now())
+  activityTime     DateTime
+  activityPlace    String
+  activityLocation String
+
+  // Relación con la tabla intermedia
+  ActivityDojos ActivityDojos[]
+
+  // Otras relaciones que ya tenías
   activityAttendance ActivityAttendance[]
   AppliedStudents    AppliedStudents[]
   Exams              Exams[]
+  dojos              Dojos?               @relation(fields: [dojosId], references: [id])
+  dojosId            Int?
+}
+
+model ActivityDojos {
+  id         Int @id @default(autoincrement())
+  activityId Int
+  dojoId     Int
+
+  // Relaciones
+  activity Activities @relation(fields: [activityId], references: [id])
+  dojo     Dojos      @relation(fields: [dojoId], references: [id])
+
+  // Evita que un dojo se asigne dos veces a la misma actividad
+  @@unique([activityId, dojoId])
 }
 
 model ActivityAttendance {
@@ -155,6 +189,7 @@ model Ranks {
   AppliedStudents AppliedStudents[]
   Exams           Exams[]
   martialArt      MartialArts       @relation(fields: [martialArtId], references: [id])
+  userRanks       UserRanks[]
 }
 
 model PaymentMethods {

@@ -84,16 +84,33 @@ export class MainLoadService {
             data: [
                 {
                     identification: '00000001',
+                    name: 'Super',
+                    lastName: 'Admin',
+                    password: 'admin',
+                    email: 'admin@gmail.com',
+                    username: 'Super Admin',
+                    address: 'Urb la Floresta',
+                    phone: '00000000000',
+                    dojoId: 1,
+                    rolId: 1,
+                    birthday: new Date('2003-04-09'),
+                    profileImg: 'profile.jpg',
+                    active: true,
+                    deleted: false,
+                    enrollmentDate: new Date('2020-01-01')
+                },
+                {
+                    identification: '00000001',
                     name: 'Luis Angel',
                     lastName: 'Ugaz Mendez',
                     password: 'admin',
                     email: 'luisangel@gmail.com',
-                    username: 'luisangel',
+                    username: 'Luis Angel',
                     address: 'Urb la Floresta',
                     phone: '04165610813',
                     dojoId: 1,
                     rolId: 2,
-                    birthday: new Date('1990-01-01'),
+                    birthday: new Date('2003-04-09'),
                     profileImg: 'profile.jpg',
                     active: true,
                     deleted: false,
@@ -105,17 +122,26 @@ export class MainLoadService {
                     lastName: 'Rojas',
                     password: 'admin',
                     email: 'eduardo@gmail.com',
-                    username: 'eduardo28',
+                    username: 'Eduardo Rojas',
                     address: 'Urb la Floresta',
                     phone: '04165610813',
                     dojoId: 1,
                     rolId: 2,
-                    birthday: new Date('1990-01-01'),
+                    birthday: new Date('2002-02-28'),
                     profileImg: 'profile.jpg',
                     active: true,
                     deleted: false,
                     enrollmentDate: new Date('2020-01-01')
                 }
+            ]
+        });
+        
+        await this.prismaService.userRanks.createMany({
+            data: [
+                { userId: 1, martialArtId: 1, currentRankId: 13 },
+                { userId: 1, martialArtId: 2, currentRankId: 13 },
+                { userId: 2, martialArtId: 1, currentRankId: 8 },
+                { userId: 2, martialArtId: 2, currentRankId: 5 },
             ]
         });
 

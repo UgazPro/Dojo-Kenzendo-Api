@@ -1,5 +1,5 @@
-import { Transform } from "class-transformer";
-import { IsDate, IsNumber, IsString } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { IsArray, IsDate, IsNumber, IsString, ValidateNested } from "class-validator";
 
 export class UsersDTO {
     @IsString()
@@ -25,6 +25,22 @@ export class UsersDTO {
     birthday: Date;
     @IsString()
     profileImg: string;
+
+    @Transform(({ value }) => new Date(value))
+    @IsDate()
+    enrollmentDate: Date;
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => MartialArtRank)
+    martialArtRank: MartialArtRank[]
+}
+
+export class MartialArtRank {
+    @IsNumber()
+    martialArtId: number
+    @IsNumber()
+    rankId: number
 }
 
 
