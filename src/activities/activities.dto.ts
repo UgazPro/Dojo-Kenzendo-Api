@@ -105,3 +105,12 @@ export class AppliedStudentDto {
     @IsNumber()
     activityId: number;
 }
+
+export class ActivityImagesDto {
+    @IsNumber()
+    activityId: number;
+
+    @IsArray()
+    @IsString({ each: true })
+    urls: string[];
+}

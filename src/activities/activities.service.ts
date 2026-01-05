@@ -1,6 +1,6 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { ActivityDto, ActivityFilterDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
+import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
 
 @Injectable()
@@ -391,6 +391,46 @@ export class ActivitiesService {
             return baseResponse;
         } catch (error) {
             badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    // Images
+    async getActivityImages(activityId: number) {
+        try {
+            const images = await this.prismaService.activitiesImages.findMany({
+                where: { activityId },
+                orderBy: { id: 'asc' },
+            });
+            return images;
+        } catch (error) {
+            badResponse.message = 'Error al obtener las imágenes de la actividad';
+            return badResponse;
+        }
+    }
+
+    async addActivityImages(data: ActivityImagesDto) {
+        try {
+            const created = await this.prismaService.activitiesImages.createMany({
+                data: data.urls.map(url => ({ activityId: data.activityId, url })),
+                skipDuplicates: true,
+            });
+            baseResponse.data = created;
+            baseResponse.message = 'Imágenes agregadas correctamente';
+            return baseResponse;
+        } catch (error) {
+            badResponse.message = 'Error al agregar las imágenes de la actividad';
+            return badResponse;
+        }
+    }
+
+    async deleteActivityImage(id: number) {
+        try {
+            await this.prismaService.activitiesImages.delete({ where: { id } });
+            baseResponse.message = 'Imagen eliminada correctamente';
+            return baseResponse;
+        } catch (error) {
+            badResponse.message = 'Error al eliminar la imagen de la actividad';
             return badResponse;
         }
     }

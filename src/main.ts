@@ -5,6 +5,7 @@ import { AllExceptionsFilter } from './filters/exception.filter';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from './guards/auth/auth.guard';
 import { RolesGuard } from './guards/roles/roles.guard';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -26,6 +27,7 @@ async function bootstrap() {
     },
   }));
   app.enableCors();
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads/' });
   app.setGlobalPrefix('/api');
   await app.listen(3000);
 }

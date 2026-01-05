@@ -1,6 +1,6 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { AttendanceFilter, DojoDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
+import { AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
 
 @Injectable()
@@ -59,7 +59,9 @@ export class DojosService {
                     address: dojoData.address,
                     latitude: dojoData.latitude,
                     longitude: dojoData.longitude,
-                    code: dojoData.code
+                    code: dojoData.code,
+                    phone: dojoData.phone,
+                    description: dojoData.description
                 }
             });
             await this.prismaService.dojoMartialArts.createMany({
@@ -90,7 +92,9 @@ export class DojosService {
                     address: dojoData.address,
                     latitude: dojoData.latitude,
                     longitude: dojoData.longitude,
-                    code: dojoData.code
+                    code: dojoData.code,
+                    phone: dojoData.phone,
+                    description: dojoData.description
                 }
             });
             await this.prismaService.dojoMartialArts.updateMany({
@@ -235,6 +239,47 @@ export class DojosService {
             return baseResponse;
         } catch (err) {
             badResponse.message = 'Error al eliminar el horario del dojo';
+            return badResponse;
+        }
+    }
+
+
+    // Images
+    async getDojoImages(dojoId: number) {
+        try {
+            const images = await this.prismaService.dojoImages.findMany({
+                where: { dojoId },
+                orderBy: { id: 'asc' }
+            });
+            return images;
+        } catch (err) {
+            badResponse.message = 'Error al obtener las imágenes del dojo';
+            return badResponse;
+        }
+    }
+
+    async addDojoImages(data: DojoImagesDto) {
+        try {
+            const created = await this.prismaService.dojoImages.createMany({
+                data: data.urls.map(url => ({ dojoId: data.dojoId, url })),
+                skipDuplicates: true,
+            });
+            baseResponse.data = created;
+            baseResponse.message = 'Imágenes agregadas correctamente';
+            return baseResponse;
+        } catch (err) {
+            badResponse.message = 'Error al agregar las imágenes del dojo';
+            return badResponse;
+        }
+    }
+
+    async deleteDojoImage(id: number) {
+        try {
+            await this.prismaService.dojoImages.delete({ where: { id } });
+            baseResponse.message = 'Imagen eliminada correctamente';
+            return baseResponse;
+        } catch (err) {
+            badResponse.message = 'Error al eliminar la imagen del dojo';
             return badResponse;
         }
     }

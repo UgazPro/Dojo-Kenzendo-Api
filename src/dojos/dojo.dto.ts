@@ -8,6 +8,10 @@ export class DojoDto {
     address: string;
     @IsString()
     code: string;
+    @IsString()
+    phone: string;
+    @IsString()
+    description: string;
 
     @IsNumber()
     @Min(-90)
@@ -68,4 +72,13 @@ export class MarkAttendanceDto {
     @IsArray()
     @IsNumber({}, { each: true })
     userIds: number[]; // Lista de IDs de alumnos presentes
+}
+
+export class DojoImagesDto {
+    @IsNumber()
+    dojoId: number;
+
+    @IsArray()
+    @IsString({ each: true })
+    urls: string[];
 }

@@ -14,6 +14,8 @@ datasource db {
 model Dojos {
   id              Int               @id @default(autoincrement())
   dojo            String
+  phone           String            @default("")
+  description     String            @default("")
   address         String
   latitude        Float // Guardará algo como 10.6447
   longitude       Float // Guardará algo como -71.6104
@@ -25,6 +27,14 @@ model Dojos {
   Users           Users[]
   activityDojos   ActivityDojos[]
   dojoMartialArts DojoMartialArts[]
+  dojoImages      DojoImages[]
+}
+
+model DojoImages {
+  id     Int    @id @default(autoincrement())
+  dojoId Int
+  url    String
+  dojo   Dojos  @relation(fields: [dojoId], references: [id])
 }
 
 model DojoMartialArts {
@@ -174,6 +184,14 @@ model Activities {
   Exams              Exams[]
   dojos              Dojos?               @relation(fields: [dojosId], references: [id])
   dojosId            Int?
+  activitiesImages   ActivitiesImages[]
+}
+
+model ActivitiesImages {
+  id         Int        @id @default(autoincrement())
+  activityId Int
+  url        String
+  activity   Activities @relation(fields: [activityId], references: [id])
 }
 
 model ActivityDojos {

@@ -1,6 +1,10 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
-import { ActivityDto, ActivityFilterDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
+import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import * as fs from 'fs';
 
 @Controller('activities')
 export class ActivitiesController {
@@ -107,5 +111,41 @@ export class ActivitiesController {
         @Body() data: AppliedStudentDto,
     ) {
         return this.activitiesService.updateAppliedStudent(id, data);
+    }
+
+    // Images
+    @Get('/images/:activityId')
+    getActivityImages(@Param('activityId', ParseIntPipe) activityId: number) {
+        return this.activitiesService.getActivityImages(activityId);
+    }
+
+    @Post('/images')
+    @UseInterceptors(FilesInterceptor('images', 10, {
+        storage: diskStorage({
+            destination: (req, file, cb) => {
+                const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'activities');
+                if (!fs.existsSync(uploadPath)) {
+                    fs.mkdirSync(uploadPath, { recursive: true });
+                }
+                cb(null, uploadPath);
+            },
+            filename: (req, file, cb) => {
+                const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(file.originalname)}`;
+                cb(null, uniqueName);
+            }
+        })
+    }))
+    addActivityImages(
+        @Body('activityId', ParseIntPipe) activityId: number,
+        @UploadedFiles() files: Express.Multer.File[],
+    ) {
+        const urls = files.map(file => `/uploads/activities/${file.filename}`);
+        const payload: ActivityImagesDto = { activityId, urls };
+        return this.activitiesService.addActivityImages(payload);
+    }
+
+    @Delete('/images/:id')
+    deleteActivityImage(@Param('id', ParseIntPipe) id: number) {
+        return this.activitiesService.deleteActivityImage(id);
     }
 }
