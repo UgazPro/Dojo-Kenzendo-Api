@@ -9,6 +9,7 @@ import { ConfigModule } from '@nestjs/config';
 import { OrganizationModule } from './organization/organization.module';
 import { DojosModule } from './dojos/dojos.module';
 import { ActivitiesModule } from './activities/activities.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ActivitiesModule } from './activities/activities.module';
     OrganizationModule,
     DojosModule,
     ActivitiesModule,
+    PaymentsModule,
 
   ],
   controllers: [AppController],
