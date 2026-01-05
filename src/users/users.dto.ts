@@ -43,5 +43,11 @@ export class MartialArtRank {
     rankId: number
 }
 
+export class UserPassword {
+    @IsNumber() 
+    id: number;
+    @IsString()
+    password: string;
+}
 
 

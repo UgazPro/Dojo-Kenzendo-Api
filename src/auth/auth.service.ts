@@ -5,23 +5,26 @@ import * as jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { badResponse, baseResponse } from '../utilities/base.dto';
 import { OAuth2Client } from 'google-auth-library';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
+  // Inicializamos el cliente de Google con el ID del proyecto
+  private googleClient: OAuth2Client;
+
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
-  ) { }
-
-  // Inicializamos el cliente de Google con el ID del proyecto
-  private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  ) {
+    this.googleClient = new OAuth2Client(this.configService.get<string>('GOOGLE_CLIENT_ID'));
+  }
 
   async authenticateWithGoogle(idToken: string) {
     try {
       // 1. Validar el token con los servidores de Google
       const ticket = await this.googleClient.verifyIdToken({
         idToken: idToken,
-        audience: process.env.GOOGLE_CLIENT_ID,
+        audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
       });
 
       const payload = ticket.getPayload(); // Aquí viene la info del usuario
@@ -44,7 +47,7 @@ export class AuthService {
             name: name as string,
             lastName: '',
             username: name as string,
-            password: googleId, // Usamos el Google ID como contraseña temporal
+            password: await bcrypt.hash(googleId as string, 10), // contraseña temporal con hash
             profileImg: picture as string,
 
             //Datos a solicitar posteriormente
@@ -55,7 +58,6 @@ export class AuthService {
             dojoId: 1,
             enrollmentDate: new Date(),
             //
-
 
             deleted: false,
             active: true,
@@ -105,7 +107,6 @@ export class AuthService {
       let findUser = await this.prismaService.users.findFirst({
         where: {
           username: credentials.username,
-          password: credentials.password,
         },
         include: {
           rol: true,
@@ -114,6 +115,12 @@ export class AuthService {
       });
 
       if (!findUser) {
+        badResponse.message = 'Usuario o contraseña incorrectos';
+        return badResponse;
+      }
+
+      const isValid = await bcrypt.compare(credentials.password, findUser.password);
+      if (!isValid) {
         badResponse.message = 'Usuario o contraseña incorrectos';
         return badResponse;
       }

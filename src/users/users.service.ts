@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { badResponse, baseResponse } from '../utilities/base.dto';
 import { UsersDTO } from './users.dto';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 
@@ -112,12 +113,13 @@ export class UsersService {
 
     async createUser(user: UsersDTO) {
         try {
+            const hashed = await bcrypt.hash(user.identification, 10);
             const userCreated = await this.prismaService.users.create({
                 data: {
                     identification: user.identification,
                     name: user.name,
                     lastName: user.lastName,
-                    password: user.identification,
+                    password: hashed,
                     email: user.email,
                     username: user.username,
                     address: user.address,
@@ -143,6 +145,25 @@ export class UsersService {
             baseResponse.message = 'Usuario creado correctamente';
             return baseResponse;
 
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async updateUserPassword(password: string, id: number) {
+        try {
+            const hashed = await bcrypt.hash(password, 10);
+            await this.prismaService.users.update({
+                data: {
+                    password: hashed,
+                },
+                where: {
+                    id: id,
+                }
+            });
+            baseResponse.message = 'Contraseña actualizada correctamente';
+            return baseResponse;
         } catch (error) {
             badResponse.message = error.message;
             return badResponse;
