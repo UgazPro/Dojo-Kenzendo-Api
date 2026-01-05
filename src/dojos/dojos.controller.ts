@@ -22,6 +22,11 @@ export class DojosController {
         return this.dojosService.createDojo(dojoData);
     }
 
+    @Put()
+    updateDojo(@Param('id', ParseIntPipe) id: number, @Body() dojoData: DojoDto) {
+        return this.dojosService.updateDojo(dojoData, id);
+    }
+
     @Get('/schedules')
     getScheduleDojo(@Query('dojoId') dojoId?: string) {
         return this.dojosService.getScheduleDojo(dojoId);

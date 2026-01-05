@@ -58,6 +58,37 @@ export class DojosService {
         }
     }
 
+    async updateDojo(dojoData: DojoDto, id: number) {
+        try {
+            const dojo = await this.prismaService.dojos.update({
+                where: { id },
+                data: {
+                    dojo: dojoData.dojo,
+                    address: dojoData.address,
+                    latitude: dojoData.latitude,
+                    longitude: dojoData.longitude,
+                    code: dojoData.code
+                }
+            });
+            await this.prismaService.dojoMartialArts.updateMany({
+                data: dojoData.martialArts.map(martialArtId => ({
+                    martialArtId,
+                    dojoId: dojo.id,
+                })),
+            });
+            const newDojo = await this.prismaService.dojos.findUnique({
+                where: { id: dojo.id },
+            })
+            baseResponse.data = newDojo;
+            baseResponse.message = 'Dojo actualizado correctamente';
+            return baseResponse;
+        }
+        catch (error) {
+            badResponse.message = 'Error al actualizar el dojo';
+            return badResponse;
+        }
+    }
+
     async getScheduleDojo(dojoId?: string) {
         const where: any = {};
         if (dojoId) {
