@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { MainLoadModule } from './main-load/main-load.module';
 import { ConfigModule } from '@nestjs/config';
 import { OrganizationModule } from './organization/organization.module';
+import { DojosModule } from './dojos/dojos.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { OrganizationModule } from './organization/organization.module';
       envFilePath: ['.env.local', '.env'], // primero busca en .env.local
     }),
     OrganizationModule,
+    DojosModule,
 
   ],
   controllers: [AppController],

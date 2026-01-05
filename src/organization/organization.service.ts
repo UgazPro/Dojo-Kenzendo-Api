@@ -6,22 +6,22 @@ export class OrganizationService {
 
     constructor(private readonly prismaService: PrismaService) { }
 
-    getDojos(){
-        return this.prismaService.dojos.findMany();
+    async getDojos() {
+        return await this.prismaService.dojos.findMany();
     }
 
-    getMartialArts(){
-        return this.prismaService.martialArts.findMany();
+    async getMartialArts() {
+        return await this.prismaService.martialArts.findMany();
     }
 
-    getRanks(martialArtId?: string){
+    async getRanks(martialArtId?: string) {
         const where: any = {};
 
         if (martialArtId) {
             where.martialArtId = Number(martialArtId);
         }
 
-        return this.prismaService.ranks.findMany({
+        return await this.prismaService.ranks.findMany({
             where,
             orderBy: { id: 'asc' },
         });

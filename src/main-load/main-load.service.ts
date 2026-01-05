@@ -12,9 +12,9 @@ export class MainLoadService {
     async loadInitialData(): Promise<DtoBaseResponse> {
         await this.prismaService.martialArts.createMany({
             data: [
-                { martialArt: 'Karate' },
-                { martialArt: 'Kobudo' },
-                { martialArt: 'Kendo Iaido' },
+                { martialArt: 'Karate', icon: 'karate-icono.png' },
+                { martialArt: 'Kobudo', icon: 'kobudo-icono.png' },
+                { martialArt: 'Kendo Iaido', icon: 'kendo-iaido-icono.png' },
             ],
         });
 
@@ -74,11 +74,24 @@ export class MainLoadService {
 
         await this.prismaService.dojos.createMany({
             data: [
-                { dojo: 'Dojo Kenzendo', address: '123 Main St', location: '', code: 'KZD', martialArts: [1, 2] },
-                { dojo: 'Dojo Okikonbukan', address: '456 Elm St', location: '', code: 'OKB', martialArts: [1, 2, 3] },
-                { dojo: 'Dojo Okinawakan', address: '456 Elm St', location: '', code: 'OKK', martialArts: [1, 2, 3] },
+                { dojo: 'Dojo Kenzendo', address: '123 Main St', latitude: 10.6447, longitude: -71.6104, code: 'KZD' },
+                { dojo: 'Dojo Okikonbukan', address: '456 Elm St', latitude: 10.6447, longitude: -71.6104, code: 'OKB' },
+                { dojo: 'Dojo Okinawakan', address: '456 Elm St', latitude: 10.6447, longitude: -71.6104, code: 'OKK' },
             ],
         });
+
+        await this.prismaService.dojoMartialArts.createMany({
+            data: [
+                { dojoId: 1, martialArtId: 1 },
+                { dojoId: 1, martialArtId: 2 },
+                { dojoId: 2, martialArtId: 1 },
+                { dojoId: 2, martialArtId: 2 },
+                { dojoId: 2, martialArtId: 3 },
+                { dojoId: 3, martialArtId: 1 },
+                { dojoId: 3, martialArtId: 2 },
+                { dojoId: 3, martialArtId: 3 },
+            ]
+        })
 
         await this.prismaService.users.createMany({
             data: [
@@ -135,7 +148,7 @@ export class MainLoadService {
                 }
             ]
         });
-        
+
         await this.prismaService.userRanks.createMany({
             data: [
                 { userId: 1, martialArtId: 1, currentRankId: 13 },
@@ -148,6 +161,7 @@ export class MainLoadService {
         return {
             success: true,
             message: 'Datos iniciales cargados correctamente',
+            data: null
         }
     }
 }

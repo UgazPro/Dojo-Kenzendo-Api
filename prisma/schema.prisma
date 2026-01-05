@@ -11,23 +11,36 @@ datasource db {
 }
 
 model Dojos {
-  id             Int              @id @default(autoincrement())
-  dojo           String
-  address        String
-  location       String
-  code           String
-  martialArts    Int[]
-  Activities     Activities[]
-  DojoAttendance DojoAttendance[]
-  PaymentMethods PaymentMethods[]
-  Schedules      Schedules[]
-  Users          Users[]
-  activityDojos  ActivityDojos[]
+  id              Int               @id @default(autoincrement())
+  dojo            String
+  address         String
+  latitude        Float // Guardará algo como 10.6447
+  longitude       Float // Guardará algo como -71.6104
+  code            String
+  Activities      Activities[]
+  DojoAttendance  DojoAttendance[]
+  PaymentMethods  PaymentMethods[]
+  Schedules       Schedules[]
+  Users           Users[]
+  activityDojos   ActivityDojos[]
+  dojoMartialArts DojoMartialArts[]
+}
+
+model DojoMartialArts {
+  id           Int         @id @default(autoincrement())
+  dojoId       Int
+  martialArtId Int
+  dojo         Dojos       @relation(fields: [dojoId], references: [id])
+  martialArt   MartialArts @relation(fields: [martialArtId], references: [id])
+
+  @@unique([dojoId, martialArtId]) // Evita duplicados
 }
 
 model Schedules {
   id           Int         @id @default(autoincrement())
   dojoId       Int
+  name         String
+  description  String      @default("")
   day          String
   startTime    String
   endTime      String
@@ -39,11 +52,13 @@ model Schedules {
 model MartialArts {
   id              Int               @id @default(autoincrement())
   martialArt      String
+  icon            String
   AppliedStudents AppliedStudents[]
   Exams           Exams[]
   Ranks           Ranks[]
   Schedules       Schedules[]
   userRanks       UserRanks[]
+  dojoMartialArts DojoMartialArts[]
 }
 
 model Users {
