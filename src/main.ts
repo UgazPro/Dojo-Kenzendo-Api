@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from './guards/auth/auth.guard';
 import { RolesGuard } from './guards/roles/roles.guard';
 import { join } from 'path';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -27,7 +28,8 @@ async function bootstrap() {
     },
   }));
   app.enableCors();
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads/' });
+  // app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads/' });
+  app.use('/public/uploads', express.static(join(__dirname, '..', 'uploads')));
   app.setGlobalPrefix('/api');
   await app.listen(3000);
 }
