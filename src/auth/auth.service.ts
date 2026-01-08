@@ -49,7 +49,7 @@ export class AuthService {
             name: name as string,
             lastName: '',
             username: name as string,
-            password: await bcrypt.hash(googleId as string, 10), // contraseña temporal con hash
+            password: await bcrypt.hash(googleId as string, 12), // contraseña temporal con hash
             profileImg: picture as string,
 
             //Datos a solicitar posteriormente

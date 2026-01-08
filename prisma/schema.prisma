@@ -17,6 +17,7 @@ model Dojos {
   phone           String            @default("")
   description     String            @default("")
   address         String
+  logo            String            @default("")
   latitude        Float // Guardará algo como 10.6447
   longitude       Float // Guardará algo como -71.6104
   code            String
