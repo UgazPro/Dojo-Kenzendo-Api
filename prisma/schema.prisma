@@ -21,6 +21,7 @@ model Dojos {
   latitude        Float // Guardará algo como 10.6447
   longitude       Float // Guardará algo como -71.6104
   code            String
+  createdAt       DateTime          @default(now())
   Activities      Activities[]
   DojoAttendance  DojoAttendance[]
   PaymentMethods  PaymentMethods[]

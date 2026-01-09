@@ -24,8 +24,18 @@ export class DojosService {
         }
 
         return await this.prismaService.dojos.findMany({
-            where
-        });
+            where,
+            include: {
+                dojoMartialArts: {
+                    include: { martialArt: true }
+                }
+            }
+        }).then(dojos => {
+            return dojos.map(dojo => ({
+                ...dojo,
+                dojoMartialArts: dojo.dojoMartialArts.map(dma => dma.martialArt)
+            }))
+        })
     }
 
     async getAttendanceDojo(attendanceDojo: AttendanceFilter) {
@@ -51,7 +61,7 @@ export class DojosService {
         }
     }
 
-    async createDojo(dojoData: DojoDto) {
+    async createDojo(dojoData: DojoDto, logo: string) {
         try {
             const dojo = await this.prismaService.dojos.create({
                 data: {
@@ -59,6 +69,7 @@ export class DojosService {
                     address: dojoData.address,
                     latitude: dojoData.latitude,
                     longitude: dojoData.longitude,
+                    logo: logo,
                     code: dojoData.code,
                     phone: dojoData.phone,
                     description: dojoData.description
@@ -114,6 +125,12 @@ export class DojosService {
             badResponse.message = 'Error al actualizar el dojo';
             return badResponse;
         }
+    }
+
+    deleteDojo(id: number) {
+        return this.prismaService.dojos.delete({
+            where: { id }   
+        });
     }
 
     //Schedules

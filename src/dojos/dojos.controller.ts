@@ -1,7 +1,7 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UploadedFile, UploadedFiles, UseInterceptors, Req } from '@nestjs/common';
 import { DojosService } from './dojos.service';
 import { AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
@@ -22,13 +22,47 @@ export class DojosController {
     }
 
     @Post()
-    createDojo(@Body() dojoData: DojoDto) {
-        return this.dojosService.createDojo(dojoData);
+    @UseInterceptors(FileInterceptor('image', {
+        storage: diskStorage({
+            destination: (req, file, cb) => {
+                const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'dojos');
+                if (!fs.existsSync(uploadPath)) {
+                    fs.mkdirSync(uploadPath, { recursive: true });
+                }
+                cb(null, uploadPath);
+            },
+            filename: (req, file, cb) => {
+                const original = file.originalname;
+                const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                cb(null, safeName);
+            }
+        }),
+        limits: { files: 1 },
+        fileFilter: (req, file, cb) => {
+            const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'dojos');
+            const original = file.originalname;
+            const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+            const fullPath = join(uploadPath, safeName);
+            if (fs.existsSync(fullPath)) {
+                req.existingFile = `/uploads/dojos/${safeName}`;
+                return cb(null, false);
+            }
+            cb(null, true);
+        }
+    }))
+    createDojo(@Req() req: any, @Body() dojoData: DojoDto, @UploadedFile() file?: Express.Multer.File) {
+        const logo = file ? `/uploads/dojos/${file.filename}` : (req.existingFile || '');
+        return this.dojosService.createDojo(dojoData, logo);
     }
 
     @Put()
     updateDojo(@Param('id', ParseIntPipe) id: number, @Body() dojoData: DojoDto) {
         return this.dojosService.updateDojo(dojoData, id);
+    }
+
+    @Delete('/:id')
+    deleteDojo(@Param('id', ParseIntPipe) id: number) {
+        return this.dojosService.deleteDojo(id);
     }
 
     @Get('/schedules')

@@ -29,7 +29,7 @@ async function bootstrap() {
   }));
   app.enableCors();
   // app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads/' });
-  app.use('/public/uploads', express.static(join(__dirname, '..', 'uploads')));
+  app.use('/api/public/uploads', express.static(join(process.cwd(), 'uploads')));
   app.setGlobalPrefix('/api');
   await app.listen(3000);
 }
