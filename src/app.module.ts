@@ -36,16 +36,16 @@ import { RolesGuard } from './guards/roles/roles.guard';
     PrismaService,
 
     //Validacion de JWT
-    // JwtService,
+    JwtService,
 
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: AuthGuard, // se ejecuta primero
-    // },
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: RolesGuard, // se ejecuta después, depende del user ya autenticado
-    // },
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard, // se ejecuta primero
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard, // se ejecuta después, depende del user ya autenticado
+    },
   ],
 })
 export class AppModule { }

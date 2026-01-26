@@ -1,6 +1,8 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { PaymentDto, PaymentFilterDto, PaymentMethodDto } from './payments.dto';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { Roles } from '@/guards/roles/roles.decorator';
 
 @Controller('payments')
 export class PaymentsController {
@@ -9,36 +11,48 @@ export class PaymentsController {
 
 	// Métodos de pago
 	@Get('/methods')
-	getPaymentMethods(@Query('dojoId') dojoId: string) {
-		return this.paymentsService.getPaymentMethods(dojoId);
+	getPaymentMethods(
+		@CurrentUser() user,
+		@Query('dojoId') dojoId: string) {
+		return this.paymentsService.getPaymentMethods(user, dojoId);
 	}
 
+	@Roles('Lider Instructor', 'Administrador')
 	@Post('/methods')
-	createPaymentMethod(@Body() data: PaymentMethodDto) {
-		return this.paymentsService.createPaymentMethod(data);
+	createPaymentMethod(
+		@CurrentUser() user,
+		@Body() data: PaymentMethodDto) {
+		return this.paymentsService.createPaymentMethod(user, data);
 	}
 
+	@Roles('Lider Instructor', 'Administrador')
 	@Put('/methods/:id')
 	updatePaymentMethod(
+		@CurrentUser() user,
 		@Param('id', ParseIntPipe) id: number,
 		@Body() data: PaymentMethodDto,
 	) {
-		return this.paymentsService.updatePaymentMethod(id, data);
+		return this.paymentsService.updatePaymentMethod(user, id, data);
 	}
 
+	@Roles('Lider Instructor', 'Administrador')
 	@Delete('/methods/:id')
-	deletePaymentMethod(@Param('id', ParseIntPipe) id: number) {
+	deletePaymentMethod(
+		@Param('id', ParseIntPipe) id: number) {
 		return this.paymentsService.deletePaymentMethod(id);
 	}
 
 	// Pagos
 	@Post('/search')
-	getPayments(@Body() filters: PaymentFilterDto) {
-		return this.paymentsService.getPayments(filters);
+	getPayments(
+		@CurrentUser() user,
+		@Body() filters?: PaymentFilterDto) {
+		return this.paymentsService.getPayments(user, filters);
 	}
 
 	@Post()
-	createPayment(@Body() data: PaymentDto) {
+	createPayment(
+		@Body() data: PaymentDto) {
 		return this.paymentsService.createPayment(data);
 	}
 

@@ -2,17 +2,23 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { PaymentDto, PaymentFilterDto, PaymentMethodDto } from './payments.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
+import { UserTokenDecode } from '@/users/users.dto';
 
 @Injectable()
 export class PaymentsService {
 
     constructor(private readonly prismaService: PrismaService) {
-        
+
     }
 
-    async getPaymentMethods(dojoId: string) {
+    async getPaymentMethods(user: UserTokenDecode, dojoId: string) {
         const where: any = {};
-        if (dojoId) where.dojoId = Number(dojoId);
+
+        if (user.rol && user.rol.rol !== 'Administrador') {
+            where.dojoId = user.dojoId;
+        } else {
+            if (dojoId) where.dojoId = Number(dojoId);
+        }
 
         try {
             return await this.prismaService.paymentMethods.findMany({
@@ -25,13 +31,14 @@ export class PaymentsService {
         }
     }
 
-    async createPaymentMethod(data: PaymentMethodDto) {
+    async createPaymentMethod(user: UserTokenDecode, data: PaymentMethodDto) {
         try {
+            
             const created = await this.prismaService.paymentMethods.create({
                 data: {
                     bank: data.bank,
                     payment_method: data.payment_method,
-                    dojoId: data.dojoId,
+                    dojoId: user.dojoId,
                     email: data.email ? data.email : '',
                     phone: data.phone,
                     identification: data.identification,
@@ -46,11 +53,18 @@ export class PaymentsService {
         }
     }
 
-    async updatePaymentMethod(id: number, data: PaymentMethodDto) {
+    async updatePaymentMethod(user: UserTokenDecode, id: number, data: PaymentMethodDto) {
         try {
             const updated = await this.prismaService.paymentMethods.update({
                 where: { id },
-                data,
+                data: {
+                    bank: data.bank,
+                    payment_method: data.payment_method,
+                    dojoId: user.dojoId,
+                    email: data.email ? data.email : '',
+                    phone: data.phone,
+                    identification: data.identification,
+                },
             });
             baseResponse.data = updated;
             baseResponse.message = 'Método de pago actualizado correctamente';
@@ -72,24 +86,27 @@ export class PaymentsService {
         }
     }
 
-    async getPayments(filters: PaymentFilterDto) {
+    async getPayments(user: UserTokenDecode, filters?: PaymentFilterDto) {
         const where: any = {};
 
-        if (filters.userId) where.userId = filters.userId;
-        if (filters.paymentMethodId) where.paymentMethodId = filters.paymentMethodId;
-
-        if (filters.startDate || filters.endDate) {
+        if (filters?.userId) where.userId = filters.userId;
+        if (filters?.paymentMethodId) where.paymentMethodId = filters.paymentMethodId;  
+        if (filters?.startDate || filters?.endDate) {
             where.payment_date = {};
-            if (filters.startDate) where.payment_date.gte = filters.startDate;
-            if (filters.endDate) {
-                const end = new Date(filters.endDate);
+            if (filters?.startDate) where.payment_date.gte = filters?.startDate;
+            if (filters?.endDate) {
+                const end = new Date(filters?.endDate);
                 end.setHours(23, 59, 59, 999);
                 where.payment_date.lte = end;
             }
         }
 
-        if (filters.dojoId) {
-            where.paymentMethod = { dojoId: filters.dojoId };
+        if (!user.rol || user.rol.rol !== 'Administrador') {
+            where.paymentMethod = { dojoId: user.dojoId };
+        } else {``
+            if (filters?.dojoId) {
+                where.paymentMethod = { dojoId: filters.dojoId };
+            }
         }
 
         try {

@@ -22,9 +22,6 @@ export class PaymentMethodDto {
     @IsNotEmpty()
     @MaxLength(50)
     identification: string;
-
-    @IsNumber()
-    dojoId: number;
 }
 
 export class PaymentDto {

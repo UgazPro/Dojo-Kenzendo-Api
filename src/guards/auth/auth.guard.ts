@@ -7,6 +7,13 @@ export interface ITokenExp {
   expired: boolean;
 }
 
+const routesIgnores = [
+  '/api/auth/login', 
+  '/api/auth/recover', 
+  '/api/main-load',
+  '/api/dojos',
+];
+
 @Injectable()
 export class AuthGuard implements CanActivate {
 
@@ -15,7 +22,7 @@ export class AuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request: Request = context.switchToHttp().getRequest();
 
-    if (request.url === '/api/auth' || request.url === '/api/auth/recover' || request.url === '/api/main-load') return true;
+    if (routesIgnores.includes(request.url)) return true;
 
     const authHeader = request.headers['authorization'];
     if (!authHeader) throw new UnauthorizedException('Token no enviado');

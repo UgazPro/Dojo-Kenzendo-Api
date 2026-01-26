@@ -70,7 +70,7 @@ export class AuthService {
 
       let { password, ...user } = findUser;
 
-      const token = jwt.sign(user, this.secretKey, { expiresIn: '8h' });
+      const token = jwt.sign(user, this.secretKey, { expiresIn: '7d' });
 
       const responseLogin: ResponseLogin = {
         ...baseResponse,
@@ -130,7 +130,7 @@ export class AuthService {
 
       let { password, ...user } = findUser;
 
-      const token = jwt.sign(user, this.secretKey, { expiresIn: '8h' });
+      const token = jwt.sign(user, this.secretKey, { expiresIn: '7d' });
 
       const responseLogin: ResponseLogin = {
         ...baseResponse,

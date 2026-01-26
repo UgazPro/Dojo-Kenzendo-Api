@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query } from '@nestjs/common';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UsersService } from './users.service';
 import { UserPassword, UsersDTO } from './users.dto';
 
@@ -9,12 +10,18 @@ export class UsersController {
 
     @Get()
     async getUsers(
+        @CurrentUser() user,
         @Query('dojoId') dojoId: string,
         @Query('userId') userId: string,
         @Query('search') search: string,
         @Query('deleted') deleted: string,
     ) {
-        return await this.userService.getUsers(dojoId, userId, search, deleted === 'true');
+        return await this.userService.getUsers(user, dojoId, userId, search, deleted === 'true');
+    }
+
+    @Get('/info')
+    async getInfoUser(@CurrentUser() user) {
+        return await this.userService.getInfoUser(user);
     }
 
     @Get('/roles')

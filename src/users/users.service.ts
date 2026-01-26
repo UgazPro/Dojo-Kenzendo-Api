@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { badResponse, baseResponse } from '../utilities/base.dto';
-import { UsersDTO } from './users.dto';
+import { UsersDTO, UserTokenDecode } from './users.dto';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -13,6 +13,7 @@ export class UsersService {
     ) { }
 
     async getUsers(
+        user: UserTokenDecode,
         dojoId?: string,
         userId?: string,
         search?: string,
@@ -20,8 +21,14 @@ export class UsersService {
     ) {
         const where: any = {};
 
-        if (dojoId) {
-            where.dojoId = Number(dojoId);
+        
+
+        if(user.rol && user.rol.rol !== 'Administrador') {
+            where.dojoId = user.dojoId;
+        } else {
+            if (dojoId) {
+                where.dojoId = Number(dojoId);
+            }
         }
 
         if (userId) {
@@ -66,9 +73,58 @@ export class UsersService {
                         }
                     }
                 },
-                where
+                where: {
+                    id: { not: user.id },
+                    ...where,
+                },
+                orderBy: {
+                    id: 'asc',
+                }
             });
             return users;
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
+    async getInfoUser(user: UserTokenDecode) {
+        try {
+            const userId = user.id;
+            if (!userId) {
+                badResponse.message = 'Usuario no encontrado en token';
+                return badResponse;
+            }
+
+            const userFound = await this.prismaService.users.findUnique({
+                where: { id: userId },
+                include: {
+                    rol: true,
+                    dojo: {
+                        select: { dojo: true, id: true }
+                    },
+                    userRanks: {
+                        select: {
+                            martialArt: true,
+                            rank: {
+                                select: {
+                                    rank_name: true,
+                                    belt: true,
+                                    icon: true,
+                                    code: true,
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (!userFound) {
+                badResponse.message = 'Usuario no existe';
+                return badResponse;
+            }
+
+            return userFound;
         } catch (error) {
             badResponse.message = error.message;
             return badResponse;
