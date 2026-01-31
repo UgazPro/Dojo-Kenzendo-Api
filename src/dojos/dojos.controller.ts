@@ -5,6 +5,7 @@ import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
 
 @Controller('dojos')
 export class DojosController {
@@ -15,10 +16,18 @@ export class DojosController {
 
     @Get()
     getDojos(
-        @Query('dojoId') dojoId?: string,
-        @Query('name') name?: string,
-        @Query('address') address?: string) {
-        return this.dojosService.getDojos(dojoId, name, address);
+        @Query('dojoId') dojoId?: string) {
+        return this.dojosService.getDojos(dojoId);
+    }
+
+    @Get('/martial-arts')
+    async getMartialArts(@CurrentUser() user) {
+        return await this.dojosService.getMartialArts(user);
+    }
+
+    @Get('/ranks')
+    async getRanks() {
+        return await this.dojosService.getRanks();
     }
 
     @Post()
@@ -44,14 +53,14 @@ export class DojosController {
             const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const fullPath = join(uploadPath, safeName);
             if (fs.existsSync(fullPath)) {
-                req.existingFile = `/uploads/dojos/${safeName}`;
+                req.existingFile = `/api/public/uploads/dojos/${safeName}`;
                 return cb(null, false);
             }
             cb(null, true);
         }
     }))
     createDojo(@Req() req: any, @Body() dojoData: DojoDto, @UploadedFile() file?: Express.Multer.File) {
-        const logo = file ? `/uploads/dojos/${file.filename}` : (req.existingFile || '');
+        const logo = file ? `/api/public/uploads/dojos/${file.filename}` : (req.existingFile || '');
         return this.dojosService.createDojo(dojoData, logo);
     }
 

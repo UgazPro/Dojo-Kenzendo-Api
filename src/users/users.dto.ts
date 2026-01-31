@@ -11,36 +11,42 @@ export class UsersDTO {
     @IsString()
     email: string;
     @IsString()
+    sex: string;
+    @IsString()
     username: string;
     @IsString()
     address: string;
     @IsString()
     phone: string;
+    @Type(() => Number)
     @IsNumber()
     dojoId: number;
+    @Type(() => Number)
     @IsNumber()
     rolId: number;
     @Transform(({ value }) => new Date(value))
     @IsDate()
     birthday: Date;
-    @IsString()
-    profileImg: string;
-
     @Transform(({ value }) => new Date(value))
     @IsDate()
     enrollmentDate: Date;
 
-    @IsArray()
-    @ValidateNested({ each: true })
+    @Transform(({ value }) => {
+        return JSON.parse(value);
+    })
+    @IsArray({message:'Debe ser un arreglo'})
+    // @ValidateNested({ each: true })
     @Type(() => MartialArtRank)
-    martialArtRank: MartialArtRank[]
+    martialArtRank: MartialArtRank[];
 }
 
 export class MartialArtRank {
+    @Type(() => Number)
     @IsNumber()
-    martialArtId: number
+    martialArtId: number;
+    @Type(() => Number)
     @IsNumber()
-    rankId: number
+    rankId: number;
 }
 
 export class UserPassword {

@@ -16,14 +16,11 @@ export class UsersService {
         user: UserTokenDecode,
         dojoId?: string,
         userId?: string,
-        search?: string,
         deleted?: boolean,
     ) {
         const where: any = {};
 
-        
-
-        if(user.rol && user.rol.rol !== 'Administrador') {
+        if (user.rol && user.rol.rol !== 'Administrador') {
             where.dojoId = user.dojoId;
         } else {
             if (dojoId) {
@@ -33,16 +30,6 @@ export class UsersService {
 
         if (userId) {
             where.id = Number(userId);
-        }
-
-        if (search) {
-            where.OR = [
-                { name: { contains: search, mode: 'insensitive' } },
-                { lastName: { contains: search, mode: 'insensitive' } },
-                { email: { contains: search, mode: 'insensitive' } },
-                { identification: { contains: search, mode: 'insensitive' } },
-                { username: { contains: search, mode: 'insensitive' } },
-            ];
         }
 
         if (!deleted) {
@@ -131,6 +118,85 @@ export class UsersService {
         }
     }
 
+    async getAllInfoByUser(id: number, user: UserTokenDecode) {
+        try {
+            const roles = ['Administrador', 'Lider Instructor', 'Instructor'];
+
+            const findUser = await this.prismaService.users.findUnique({
+                where: { id },
+                include: {
+                    rol: true,
+                    dojo: {
+                        select: { dojo: true, id: true }
+                    },
+                    userRanks: {
+                        select: {
+                            martialArt: true,
+                            rank: {
+                                select: {
+                                    rank_name: true,
+                                    belt: true,
+                                    icon: true,
+                                    code: true,
+                                }
+                            }
+                        }
+                    },
+                    DojoAttendance: {
+                        select: {
+                            attendanceDate: true,
+                            scheduleId: true,
+                        }
+                    },
+                }
+            });
+
+            if (!findUser) {
+                badResponse.message = 'Usuario no existe';
+                return badResponse;
+            }
+
+            if (findUser?.dojoId !== user.dojoId && !roles.includes(user.rol.rol)) {
+                badResponse.message = 'No tienes permiso para ver este usuario';
+                return badResponse;
+            }
+
+            const dojoAttendance = await this.prismaService.dojoAttendance.findMany({
+                where: { dojoId: findUser.dojoId },
+                select: {
+                    scheduleId: true,
+                    attendanceDate: true,
+                }
+            });
+
+            const normalizeDate = (date: Date) => new Date(date).toISOString().split('T')[0];
+
+            const dojoSessions = new Set(
+                dojoAttendance.map(item => `${item.scheduleId}-${normalizeDate(item.attendanceDate)}`),
+            );
+
+            const userSessions = new Set(
+                (findUser.DojoAttendance ?? []).map(item => `${item.scheduleId}-${normalizeDate(item.attendanceDate)}`),
+            );
+
+            const attendancePercentage = dojoSessions.size > 0
+                ? Number(((userSessions.size / dojoSessions.size) * 100).toFixed(2))
+                : 0;
+
+            return {
+                ...findUser,
+                attendanceStats: {
+                    totalAttendances: findUser.DojoAttendance?.length ?? 0,
+                    totalSessions: dojoSessions.size,
+                    attendancePercentage,
+                },
+            };
+        } catch (error) {
+            badResponse.message = error.message;
+            return badResponse;
+        }
+    }
+
     async getRoles() {
         try {
             const roles = await this.prismaService.roles.findMany();
@@ -172,7 +238,7 @@ export class UsersService {
         }
     }
 
-    async createUser(user: UsersDTO) {
+    async createUser(user: UsersDTO, profileImg: string) {
         try {
             const hashed = await bcrypt.hash(user.identification, 10);
             const userCreated = await this.prismaService.users.create({
@@ -185,10 +251,11 @@ export class UsersService {
                     username: user.username,
                     address: user.address,
                     phone: user.phone,
+                    sex: user.sex,
                     dojoId: user.dojoId,
                     rolId: user.rolId,
                     birthday: user.birthday,
-                    profileImg: user.profileImg,
+                    profileImg: profileImg,
                     active: true,
                     deleted: false,
                     enrollmentDate: user.enrollmentDate,
@@ -231,7 +298,7 @@ export class UsersService {
         }
     }
 
-    async updateUser(user: UsersDTO, id: number) {
+    async updateUser(user: UsersDTO, id: number, profileImg: string) {
         try {
             await this.prismaService.users.update({
                 data: {
@@ -239,11 +306,12 @@ export class UsersService {
                     name: user.name,
                     lastName: user.lastName,
                     email: user.email,
+                    sex: user.sex,
                     username: user.username,
                     address: user.address,
                     phone: user.phone,
                     birthday: user.birthday,
-                    profileImg: user.profileImg,
+                    profileImg: profileImg,
                 },
                 where: {
                     id: id,

@@ -111,7 +111,13 @@ export class AuthService {
         },
         include: {
           rol: true,
-          dojo: true,
+          dojo: {
+            select: {
+              id: true,
+              dojo: true,
+              code: true,
+            }
+          },
         },
       });
 

@@ -2,29 +2,23 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
+import { UserTokenDecode } from '@/users/users.dto';
 
 @Injectable()
 export class DojosService {
 
     constructor(private readonly prismaService: PrismaService) { }
 
-    async getDojos(dojoId?: string, name?: string, address?: string) {
+    async getDojos(dojoId?: string) {
         const where: any = {};
 
         if (dojoId) {
             where.id = Number(dojoId);
         }
 
-        if (name) {
-            where.dojo = { contains: name, mode: 'insensitive' };
-        }
-
-        if (address) {
-            where.address = { contains: address, mode: 'insensitive' };
-        }
-
         return await this.prismaService.dojos.findMany({
             where,
+            orderBy: { id: 'asc' },
             include: {
                 dojoMartialArts: {
                     include: { martialArt: true }
@@ -36,6 +30,29 @@ export class DojosService {
                 dojoMartialArts: dojo.dojoMartialArts.map(dma => dma.martialArt)
             }))
         })
+    }
+
+    async getMartialArts(user: UserTokenDecode) {
+        const where: any = {};
+
+        if (user.rol.rol !== 'Administrador') {
+            where.dojoMartialArts = {
+                some: {
+                    dojoId: user.dojoId
+                }
+            };
+        }
+
+        return await this.prismaService.martialArts.findMany({
+            orderBy: { id: 'asc' },
+            where
+        });
+    }
+
+    async getRanks() {
+        return await this.prismaService.ranks.findMany({
+            orderBy: { id: 'asc' },
+        });
     }
 
     async getAttendanceDojo(attendanceDojo: AttendanceFilter) {
@@ -129,7 +146,7 @@ export class DojosService {
 
     deleteDojo(id: number) {
         return this.prismaService.dojos.delete({
-            where: { id }   
+            where: { id }
         });
     }
 
