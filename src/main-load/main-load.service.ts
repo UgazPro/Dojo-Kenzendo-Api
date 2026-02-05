@@ -1,6 +1,7 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { DtoBaseResponse } from '@/utilities/base.dto';
 import { Injectable } from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class MainLoadService {
@@ -99,7 +100,7 @@ export class MainLoadService {
                     identification: '00000001',
                     name: 'Super',
                     lastName: 'Admin',
-                    password: 'admin',
+                    password: await bcrypt.hash('admin' as string, 12),
                     email: 'admin@gmail.com',
                     username: 'Super Admin',
                     address: 'Urb la Floresta',
@@ -116,7 +117,7 @@ export class MainLoadService {
                     identification: '00000001',
                     name: 'Luis Angel',
                     lastName: 'Ugaz Mendez',
-                    password: 'admin',
+                    password: await bcrypt.hash('admin' as string, 12),
                     email: 'luisangel@gmail.com',
                     username: 'Luis Angel',
                     address: 'Urb la Floresta',
@@ -133,7 +134,7 @@ export class MainLoadService {
                     identification: '28391325',
                     name: 'Eduardo',
                     lastName: 'Rojas',
-                    password: 'admin',
+                    password: await bcrypt.hash('admin' as string, 12),
                     email: 'eduardo@gmail.com',
                     username: 'Eduardo Rojas',
                     address: 'Urb la Floresta',

@@ -10,7 +10,7 @@ import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // app.useGlobalGuards(new AuthGuard(app.get(JwtService)), new RolesGuard(app.get(Reflector)))
+  app.useGlobalGuards(new AuthGuard(app.get(JwtService)), new RolesGuard(app.get(Reflector)))
   app.useGlobalFilters(new AllExceptionsFilter());
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
@@ -29,7 +29,7 @@ async function bootstrap() {
   }));
   app.enableCors();
   // app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads/' });
-  app.use('/public/uploads', express.static(join(__dirname, '..', 'uploads')));
+  app.use('/api/public/uploads', express.static(join(process.cwd(), 'uploads')));
   app.setGlobalPrefix('/api');
   await app.listen(3000);
 }

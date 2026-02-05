@@ -49,7 +49,7 @@ export class AuthService {
             name: name as string,
             lastName: '',
             username: name as string,
-            password: await bcrypt.hash(googleId as string, 10), // contraseña temporal con hash
+            password: await bcrypt.hash(googleId as string, 12), // contraseña temporal con hash
             profileImg: picture as string,
 
             //Datos a solicitar posteriormente
@@ -70,7 +70,7 @@ export class AuthService {
 
       let { password, ...user } = findUser;
 
-      const token = jwt.sign(user, this.secretKey, { expiresIn: '8h' });
+      const token = jwt.sign(user, this.secretKey, { expiresIn: '7d' });
 
       const responseLogin: ResponseLogin = {
         ...baseResponse,
@@ -111,7 +111,13 @@ export class AuthService {
         },
         include: {
           rol: true,
-          dojo: true,
+          dojo: {
+            select: {
+              id: true,
+              dojo: true,
+              code: true,
+            }
+          },
         },
       });
 
@@ -130,7 +136,7 @@ export class AuthService {
 
       let { password, ...user } = findUser;
 
-      const token = jwt.sign(user, this.secretKey, { expiresIn: '8h' });
+      const token = jwt.sign(user, this.secretKey, { expiresIn: '7d' });
 
       const responseLogin: ResponseLogin = {
         ...baseResponse,
