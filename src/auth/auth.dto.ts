@@ -25,8 +25,6 @@ export class GoogleAuthDTO {
     @Transform(({ value }) => new Date(value))
     birthday: Date;
     @IsNumber()
-    rolId: number;
-    @IsNumber()
     dojoId: number;
     @IsString()
     enrollmentDate: Date;

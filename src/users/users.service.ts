@@ -70,7 +70,8 @@ export class UsersService {
             });
             return users;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -113,7 +114,8 @@ export class UsersService {
 
             return userFound;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -192,22 +194,28 @@ export class UsersService {
                 },
             };
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
 
-    async getRoles() {
+    async getRoles(user: UserTokenDecode) {
         try {
-            const roles = await this.prismaService.roles.findMany();
+            const roles = await this.prismaService.roles.findMany({
+                where: {
+                    id: { gt: user.rolId },
+                }
+            });
             return roles;
-        } catch (err) {
-            badResponse.message = err.message;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
 
-    async getUserFormOptions() {
+    async getUserFormOptions(user: UserTokenDecode) {
         try {
             const [
                 roles,
@@ -215,7 +223,11 @@ export class UsersService {
                 martialArt,
                 ranks,
             ] = await Promise.all([
-                this.prismaService.roles.findMany(),
+                this.prismaService.roles.findMany({
+                    where: {
+                        id: { gt: user.rolId },
+                    }
+                }),
                 this.prismaService.dojos.findMany({
                     select: { id: true, dojo: true }
                 }),
@@ -238,7 +250,7 @@ export class UsersService {
         }
     }
 
-    async createUser(user: UsersDTO, profileImg: string) {
+    async createUser(user: UsersDTO, profileImg: string, currentUser: UserTokenDecode) {
         try {
             const hashed = await bcrypt.hash(user.identification, 10);
             const userCreated = await this.prismaService.users.create({
@@ -274,7 +286,8 @@ export class UsersService {
             return baseResponse;
 
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -293,7 +306,8 @@ export class UsersService {
             baseResponse.message = 'Contraseña actualizada correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -329,7 +343,8 @@ export class UsersService {
             return baseResponse;
 
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -348,7 +363,8 @@ export class UsersService {
             baseResponse.message = 'Usuario eliminado correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }

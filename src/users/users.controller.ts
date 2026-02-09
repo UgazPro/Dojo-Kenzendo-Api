@@ -35,13 +35,13 @@ export class UsersController {
     }
 
     @Get('/roles')
-    async getRoles() {
-        return await this.userService.getRoles();
+    async getRoles(@CurrentUser() user) {
+        return await this.userService.getRoles(user);
     }
 
     @Get('/form')
-    async getUserFormOptions() {
-        return await this.userService.getUserFormOptions();
+    async getUserFormOptions(@CurrentUser() user) {
+        return await this.userService.getUserFormOptions(user);
     }
 
     @Post()
@@ -73,10 +73,15 @@ export class UsersController {
             cb(null, true);
         }
     }))
-    async createUser(@Req() req: any, @Body() user: UsersDTO, @UploadedFile() file?: Express.Multer.File) {
+    async createUser(
+        @Req() req: any, 
+        @Body() newUser: UsersDTO, 
+        @CurrentUser() user,
+        @UploadedFile() file?: Express.Multer.File, 
+        ) {
         const profileImg = file ? `/api/public/uploads/users/${file.filename}` : (req.existingFile || '');
 
-        return await this.userService.createUser(user, profileImg);
+        return await this.userService.createUser(newUser, profileImg, user);
     }
 
     @Put('/:id')

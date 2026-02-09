@@ -26,7 +26,8 @@ export class PaymentsService {
                 orderBy: { id: 'asc' },
             });
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -48,7 +49,8 @@ export class PaymentsService {
             baseResponse.message = 'Método de pago creado correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -70,7 +72,8 @@ export class PaymentsService {
             baseResponse.message = 'Método de pago actualizado correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -81,7 +84,8 @@ export class PaymentsService {
             baseResponse.message = 'Método de pago eliminado correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -124,7 +128,8 @@ export class PaymentsService {
             });
             return payments;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -138,7 +143,8 @@ export class PaymentsService {
             baseResponse.message = 'Pago registrado correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -153,7 +159,8 @@ export class PaymentsService {
             baseResponse.message = 'Pago actualizado correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
