@@ -3,85 +3,85 @@ import { IsArray, IsDate, IsNumber, IsString, Max, Min, ValidateNested } from "c
 
 export class DojoDto {
     @IsString()
-    dojo: string;
+    dojo!: string;
     @IsString()
-    address: string;
+    address!: string;
     @IsString()
-    code: string;
+    code!: string;
     @IsString()
-    phone: string;
+    phone!: string;
     @IsString()
-    description: string;
+    description!: string;
 
     @Type(() => Number)
     @IsNumber()
     @Min(-90)
     @Max(90)
-    latitude: number;
+    latitude!: number;
 
     @Type(() => Number)
     @IsNumber()
     @Min(-180)
     @Max(180)
-    longitude: number;
+    longitude!: number;
 
 
     @Type(() => Number)
     @IsNumber({}, { each: true })
-    martialArts: number[];
+    martialArts!: number[];
 }
 
 export class ScheduleDojoDTO {
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => ScheduleDTO)
-    schedule: ScheduleDTO[]
+    schedule!: ScheduleDTO[];
 }
 
 export class ScheduleDTO {
     @IsNumber()
-    dojoId: number;
+    dojoId!: number;
     @IsString()
-    day: string;
+    day!: string;
     @IsString()
-    name: string;
+    name!: string;
     @IsString()
-    startTime: string;
+    startTime!: string;
     @IsString()
-    endTime: string;
+    endTime!: string;
     @IsNumber()
-    martialArtId: number;
+    martialArtId!: number;
 }
 
 //Attendance
 
 export class AttendanceFilter {
     @IsNumber()
-    dojoId: number;
+    dojoId!: number;
     @IsDate()
     @Transform(({ value }) => new Date(value))
-    startOfWeek: Date;
+    startOfWeek!: Date;
     @IsDate()
     @Transform(({ value }) => new Date(value))
-    endOfWeek: Date;
+    endOfWeek!: Date;
 }
 export class MarkAttendanceDto {
     @IsNumber()
-    dojoId: number;
+    dojoId!: number;
 
     @IsNumber()
-    scheduleId: number; // El ID del horario detectado o seleccionado
+    scheduleId!: number; // El ID del horario detectado o seleccionado
 
     @IsArray()
     @IsNumber({}, { each: true })
-    userIds: number[]; // Lista de IDs de alumnos presentes
+    userIds!: number[]; // Lista de IDs de alumnos presentes
 }
 
 export class DojoImagesDto {
     @IsNumber()
-    dojoId: number;
+    dojoId!: number;
 
     @IsArray()
     @IsString({ each: true })
-    urls: string[];
+    urls!: string[];
 }

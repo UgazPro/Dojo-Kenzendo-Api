@@ -17,7 +17,7 @@ export class PaymentsController {
 		return this.paymentsService.getPaymentMethods(user, dojoId);
 	}
 
-	@Roles('Lider Instructor', 'Administrador')
+	@Roles('Líder Instructor', 'Administrador')
 	@Post('/methods')
 	createPaymentMethod(
 		@CurrentUser() user,
@@ -25,7 +25,7 @@ export class PaymentsController {
 		return this.paymentsService.createPaymentMethod(user, data);
 	}
 
-	@Roles('Lider Instructor', 'Administrador')
+	@Roles('Líder Instructor', 'Administrador')
 	@Put('/methods/:id')
 	updatePaymentMethod(
 		@CurrentUser() user,
@@ -35,7 +35,7 @@ export class PaymentsController {
 		return this.paymentsService.updatePaymentMethod(user, id, data);
 	}
 
-	@Roles('Lider Instructor', 'Administrador')
+	@Roles('Líder Instructor', 'Administrador')
 	@Delete('/methods/:id')
 	deletePaymentMethod(
 		@Param('id', ParseIntPipe) id: number) {

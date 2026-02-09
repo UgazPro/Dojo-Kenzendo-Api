@@ -1,7 +1,7 @@
 export class DtoBaseResponse {
-    message: string;
-    success: boolean;
-    data: any;
+    message!: string;
+    success!: boolean;
+    data!: any;
 }
 
 export const baseResponse: DtoBaseResponse = {

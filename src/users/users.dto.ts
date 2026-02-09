@@ -3,57 +3,57 @@ import { IsArray, IsDate, IsNumber, IsString, ValidateNested } from "class-valid
 
 export class UsersDTO {
     @IsString()
-    identification: string;
+    identification!: string;
     @IsString()
-    name: string;
+    name!: string;
     @IsString()
-    lastName: string;
+    lastName!: string;
     @IsString()
-    email: string;
+    email!: string;
     @IsString()
-    sex: string;
+    sex!: string;
     @IsString()
-    username: string;
+    username!: string;
     @IsString()
-    address: string;
+    address!: string;
     @IsString()
-    phone: string;
+    phone!: string;
     @Type(() => Number)
     @IsNumber()
-    dojoId: number;
+    dojoId!: number;
     @Type(() => Number)
     @IsNumber()
-    rolId: number;
+    rolId!: number;
     @Transform(({ value }) => new Date(value))
     @IsDate()
-    birthday: Date;
+    birthday!: Date;
     @Transform(({ value }) => new Date(value))
     @IsDate()
-    enrollmentDate: Date;
+    enrollmentDate!: Date;
 
     @Transform(({ value }) => {
         return JSON.parse(value);
     })
-    @IsArray({message:'Debe ser un arreglo'})
+    @IsArray({ message: 'Debe ser un arreglo' })
     // @ValidateNested({ each: true })
     @Type(() => MartialArtRank)
-    martialArtRank: MartialArtRank[];
+    martialArtRank!: MartialArtRank[];
 }
 
 export class MartialArtRank {
     @Type(() => Number)
     @IsNumber()
-    martialArtId: number;
+    martialArtId!: number;
     @Type(() => Number)
     @IsNumber()
-    rankId: number;
+    rankId!: number;
 }
 
 export class UserPassword {
-    @IsNumber() 
-    id: number;
+    @IsNumber()
+    id!: number;
     @IsString()
-    password: string;
+    password!: string;
 }
 
 

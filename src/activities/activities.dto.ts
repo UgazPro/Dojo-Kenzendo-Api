@@ -30,27 +30,27 @@ export class ActivityFilterDto {
 
 export class ActivityDto {
     @IsString()
-    name: string;
+    name!: string;
 
     @IsDate()
     @Transform(({ value }) => new Date(value))
-    date: Date;
+    date!: Date;
 
     @IsString()
-    place: string;
+    place!: string;
 
     @IsNumber()
-    price: number;
+    price!: number;
 
     @IsNumber()
     @Min(-90)
     @Max(90)
-    latitude: number;
+    latitude!: number;
 
     @IsNumber()
     @Min(-180)
     @Max(180)
-    longitude: number;
+    longitude!: number;
 
     @IsOptional()
     @IsNumber()
@@ -64,53 +64,53 @@ export class ActivityDto {
 
 export class MarkActivityAttendanceDto {
     @IsNumber()
-    activityId: number;
+    activityId!: number;
 
     @IsArray()
     @IsNumber({}, { each: true })
-    userIds: number[];
+    userIds!: number[];
 }
 
 export class ExamStudentsDto {
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => ExamDto)
-    exams: ExamDto[];
+    exams!: ExamDto[];
 }
 
 export class ExamDto {
     @IsNumber()
-    martialArtId: number;
+    martialArtId!: number;
 
     @IsNumber()
-    userId: number;
+    userId!: number;
 
     @IsNumber()
-    ranksId: number;
+    ranksId!: number;
 
     @IsNumber()
-    activityId: number;
+    activityId!: number;
 }
 
 export class AppliedStudentDto {
     @IsNumber()
-    martialArtId: number;
+    martialArtId!: number;
 
     @IsNumber()
-    userId: number;
+    userId!: number;
 
     @IsNumber()
-    ranksId: number;
+    ranksId!: number;
 
     @IsNumber()
-    activityId: number;
+    activityId!: number;
 }
 
 export class ActivityImagesDto {
     @IsNumber()
-    activityId: number;
+    activityId!: number;
 
     @IsArray()
     @IsString({ each: true })
-    urls: string[];
+    urls!: string[];
 }
