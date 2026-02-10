@@ -51,6 +51,7 @@ export class UsersService {
                             martialArt: true,
                             rank: {
                                 select: {
+                                    id: true,
                                     rank_name: true,
                                     belt: true,
                                     icon: true,
@@ -96,6 +97,7 @@ export class UsersService {
                             martialArt: true,
                             rank: {
                                 select: {
+                                    id: true,
                                     rank_name: true,
                                     belt: true,
                                     icon: true,
