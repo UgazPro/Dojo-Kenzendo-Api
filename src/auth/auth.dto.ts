@@ -5,29 +5,27 @@ import { Transform } from "class-transformer";
 
 export class LoginDTO {
     @IsString()
-    username: string;
+    username!: string;
     @IsString()
-    password: string;
+    password!: string;
 }
 
 export class ResponseLogin extends DtoBaseResponse {
-    token: string;
+    token!: string;
 }
 
 export class GoogleAuthDTO {
     @IsString()
-    identification: string;
+    identification!: string;
     @IsString()
-    address: string;
+    address!: string;
     @IsString()
-    phone: string;
+    phone!: string;
     @IsDate()
     @Transform(({ value }) => new Date(value))
-    birthday: Date;
+    birthday!: Date;
     @IsNumber()
-    rolId: number;
-    @IsNumber()
-    dojoId: number;
+    dojoId!: number;
     @IsString()
-    enrollmentDate: Date;
+    enrollmentDate!: Date;
 }

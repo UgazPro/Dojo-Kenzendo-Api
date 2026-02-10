@@ -51,6 +51,7 @@ export class UsersService {
                             martialArt: true,
                             rank: {
                                 select: {
+                                    id: true,
                                     rank_name: true,
                                     belt: true,
                                     icon: true,
@@ -70,7 +71,8 @@ export class UsersService {
             });
             return users;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -95,6 +97,7 @@ export class UsersService {
                             martialArt: true,
                             rank: {
                                 select: {
+                                    id: true,
                                     rank_name: true,
                                     belt: true,
                                     icon: true,
@@ -113,41 +116,20 @@ export class UsersService {
 
             return userFound;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
 
     async getAllInfoByUser(id: number, user: UserTokenDecode) {
         try {
-            const roles = ['Administrador', 'Lider Instructor', 'Instructor'];
-
+            const roles = ['Administrador', 'Líder Instructor', 'Instructor'];
             const findUser = await this.prismaService.users.findUnique({
                 where: { id },
-                include: {
-                    rol: true,
-                    dojo: {
-                        select: { dojo: true, id: true }
-                    },
-                    userRanks: {
-                        select: {
-                            martialArt: true,
-                            rank: {
-                                select: {
-                                    rank_name: true,
-                                    belt: true,
-                                    icon: true,
-                                    code: true,
-                                }
-                            }
-                        }
-                    },
-                    DojoAttendance: {
-                        select: {
-                            attendanceDate: true,
-                            scheduleId: true,
-                        }
-                    },
+                select: {
+                    dojoId: true,
+                    id: true,
                 }
             });
 
@@ -160,14 +142,90 @@ export class UsersService {
                 badResponse.message = 'No tienes permiso para ver este usuario';
                 return badResponse;
             }
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-            const dojoAttendance = await this.prismaService.dojoAttendance.findMany({
-                where: { dojoId: findUser.dojoId },
-                select: {
-                    scheduleId: true,
-                    attendanceDate: true,
-                }
-            });
+            const [
+                dojoAttendance,
+                userAttendance,
+                paymentsThisMonth,
+                exams,
+                appliedStudents,
+                upcomingExamActivity,
+                activityAttendanceHistory,
+            ] = await Promise.all([
+                this.prismaService.dojoAttendance.findMany({
+                    where: {
+                        dojoId: findUser.dojoId,
+                        attendanceDate: {
+                            gte: startOfMonth,
+                            lte: endOfMonth,
+                        }
+                    },
+                    select: {
+                        scheduleId: true,
+                        attendanceDate: true,
+                    }
+                }),
+                this.prismaService.dojoAttendance.findMany({
+                    where: {
+                        userId: findUser.id,
+                        attendanceDate: {
+                            gte: startOfMonth,
+                            lte: endOfMonth,
+                        }
+                    },
+                    select: {
+                        scheduleId: true,
+                        attendanceDate: true,
+                    }
+                }),
+                this.prismaService.payments.findMany({
+                    where: {
+                        userId: findUser.id,
+                        payment_date: {
+                            gte: startOfMonth,
+                            lte: endOfMonth,
+                        }
+                    },
+                    select: {
+                        id: true,
+                        payment_date: true,
+                        amount: true,
+                    }
+                }),
+                this.prismaService.exams.findMany({
+                    where: { userId: findUser.id },
+                    include: {
+                        activity: true,
+                        martialArt: true,
+                        ranks: true,
+                    }
+                }),
+                this.prismaService.appliedStudents.findMany({
+                    where: { userId: findUser.id },
+                    include: {
+                        activity: true,
+                        martialArt: true,
+                        ranks: true,
+                    }
+                }),
+                this.prismaService.activities.findFirst({
+                    where: {
+                        date: { gt: now },
+                        AppliedStudents: {
+                            some: { userId: findUser.id }
+                        }
+                    },
+                    orderBy: { date: 'asc' },
+                }),
+                this.prismaService.activityAttendance.findMany({
+                    where: { userId: findUser.id },
+                    include: { activity: true },
+                    orderBy: { activity: { date: 'desc' } }
+                }),
+            ]);
 
             const normalizeDate = (date: Date) => new Date(date).toISOString().split('T')[0];
 
@@ -176,38 +234,76 @@ export class UsersService {
             );
 
             const userSessions = new Set(
-                (findUser.DojoAttendance ?? []).map(item => `${item.scheduleId}-${normalizeDate(item.attendanceDate)}`),
+                userAttendance.map(item => `${item.scheduleId}-${normalizeDate(item.attendanceDate)}`),
             );
 
             const attendancePercentage = dojoSessions.size > 0
                 ? Number(((userSessions.size / dojoSessions.size) * 100).toFixed(2))
                 : 0;
 
+            const paymentsUpToDate = paymentsThisMonth.length > 0;
+
+            const approvedExamKeys = new Set(
+                exams.map(exam => `${exam.activityId}-${exam.martialArtId}-${exam.ranksId}`),
+            );
+
+            const appliedExamKeys = new Set(
+                appliedStudents.map(applied => `${applied.activityId}-${applied.martialArtId}-${applied.ranksId}`),
+            );
+
+            const examsHistory = appliedStudents.map(applied => {
+                const key = `${applied.activityId}-${applied.martialArtId}-${applied.ranksId}`;
+                const approved = approvedExamKeys.has(key);
+                return {
+                    activity: applied.activity,
+                    martialArt: applied.martialArt,
+                    rank: applied.ranks,
+                    approved,
+                };
+            });
+
+            const approvedOnly = exams
+                .filter(exam => {
+                    const key = `${exam.activityId}-${exam.martialArtId}-${exam.ranksId}`;
+                    return !appliedExamKeys.has(key);
+                })
+                .map(exam => ({
+                    activity: exam.activity,
+                    martialArt: exam.martialArt,
+                    rank: exam.ranks,
+                    approved: true,
+                }));
+
             return {
-                ...findUser,
-                attendanceStats: {
-                    totalAttendances: findUser.DojoAttendance?.length ?? 0,
-                    totalSessions: dojoSessions.size,
-                    attendancePercentage,
-                },
+                attendancePercentage,
+                paymentStatus: paymentsUpToDate ? 'AL_DIA' : 'DEUDA',
+                examsHistory: [...examsHistory, ...approvedOnly],
+                upcomingExam: upcomingExamActivity ?? null,
+                activityAttendanceHistory,
             };
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
 
-    async getRoles() {
+    async getRoles(user: UserTokenDecode) {
         try {
-            const roles = await this.prismaService.roles.findMany();
+            const roles = await this.prismaService.roles.findMany({
+                where: {
+                    id: { gt: user.rolId },
+                }
+            });
             return roles;
-        } catch (err) {
-            badResponse.message = err.message;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
 
-    async getUserFormOptions() {
+    async getUserFormOptions(user: UserTokenDecode) {
         try {
             const [
                 roles,
@@ -215,7 +311,11 @@ export class UsersService {
                 martialArt,
                 ranks,
             ] = await Promise.all([
-                this.prismaService.roles.findMany(),
+                this.prismaService.roles.findMany({
+                    where: {
+                        id: { gt: user.rolId },
+                    }
+                }),
                 this.prismaService.dojos.findMany({
                     select: { id: true, dojo: true }
                 }),
@@ -238,8 +338,9 @@ export class UsersService {
         }
     }
 
-    async createUser(user: UsersDTO, profileImg: string) {
+    async createUser(user: UsersDTO, profileImg: string, currentUser: UserTokenDecode) {
         try {
+            const dojoId = currentUser.rol.rol === 'Administrador' ? user.dojoId : currentUser.dojoId;
             const hashed = await bcrypt.hash(user.identification, 10);
             const userCreated = await this.prismaService.users.create({
                 data: {
@@ -252,7 +353,7 @@ export class UsersService {
                     address: user.address,
                     phone: user.phone,
                     sex: user.sex,
-                    dojoId: user.dojoId,
+                    dojoId: dojoId,
                     rolId: user.rolId,
                     birthday: user.birthday,
                     profileImg: profileImg,
@@ -274,7 +375,8 @@ export class UsersService {
             return baseResponse;
 
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -293,7 +395,8 @@ export class UsersService {
             baseResponse.message = 'Contraseña actualizada correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -329,7 +432,8 @@ export class UsersService {
             return baseResponse;
 
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -348,7 +452,8 @@ export class UsersService {
             baseResponse.message = 'Usuario eliminado correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }

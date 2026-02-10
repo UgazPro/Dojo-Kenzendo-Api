@@ -4,15 +4,15 @@ import { IsDate, IsEmail, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString
 export class PaymentMethodDto {
     @IsString()
     @IsNotEmpty()
-    payment_method: string;
+    payment_method!: string;
 
     @IsString()
     @IsNotEmpty()
-    bank: string;
+    bank!: string;
 
     @IsString()
     @IsNotEmpty()
-    phone: string;
+    phone!: string;
 
     @IsEmail()
     @IsOptional()
@@ -21,28 +21,28 @@ export class PaymentMethodDto {
     @IsString()
     @IsNotEmpty()
     @MaxLength(50)
-    identification: string;
+    identification!: string;
 }
 
 export class PaymentDto {
     @IsNumber()
-    userId: number;
+    userId!: number;
 
     @IsNumber()
-    paymentMethodId: number;
+    paymentMethodId!: number;
 
     @IsNumber()
     @IsPositive()
-    amount: number;
+    amount!: number;
 
     @IsDate()
     @Transform(({ value }) => new Date(value))
-    payment_date: Date;
+    payment_date!: Date;
 }
 
 export class PaymentFilterDto {
     @IsNumber()
-    dojoId: number;
+    dojoId!: number;
 
     @IsOptional()
     @IsNumber()

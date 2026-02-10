@@ -62,7 +62,8 @@ export class ActivitiesService {
             });
             return activities;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -105,7 +106,8 @@ export class ActivitiesService {
             });
             return activity;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -155,7 +157,8 @@ export class ActivitiesService {
             baseResponse.message = 'Actividad creada correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -205,7 +208,8 @@ export class ActivitiesService {
             baseResponse.message = 'Actividad actualizada correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -227,7 +231,8 @@ export class ActivitiesService {
             });
             return attendance;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -248,7 +253,8 @@ export class ActivitiesService {
             baseResponse.message = 'Asistencia registrada correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -278,7 +284,8 @@ export class ActivitiesService {
             });
             return exams;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -298,7 +305,8 @@ export class ActivitiesService {
             baseResponse.message = 'Examen creado correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -319,7 +327,8 @@ export class ActivitiesService {
             baseResponse.message = 'Examen actualizado correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -349,7 +358,8 @@ export class ActivitiesService {
             });
             return applied;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -369,7 +379,8 @@ export class ActivitiesService {
             baseResponse.message = 'Postulación creada correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }
@@ -390,7 +401,8 @@ export class ActivitiesService {
             baseResponse.message = 'Postulación actualizada correctamente';
             return baseResponse;
         } catch (error) {
-            badResponse.message = error.message;
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
             return badResponse;
         }
     }

@@ -36,6 +36,16 @@ export class AuthService {
 
       let findUser = await this.prismaService.users.findFirst({
         where: { email },
+        include: {
+          rol: true,
+          dojo: {
+            select: {
+              id: true,
+              dojo: true,
+              code: true,
+            }
+          },
+        },
       });
 
       const roleId = await this.prismaService.roles.findFirst({
@@ -65,6 +75,16 @@ export class AuthService {
             active: true,
             rolId: roleId?.id as number,
           },
+          include: {
+            rol: true,
+            dojo: {
+              select: {
+                id: true,
+                dojo: true,
+                code: true,
+              }
+            },
+          },
         });
       }
 
@@ -93,7 +113,6 @@ export class AuthService {
           address: userData.address,
           phone: userData.phone,
           birthday: userData.birthday,
-          rolId: userData.rolId,
           dojoId: userData.dojoId,
           enrollmentDate: userData.enrollmentDate,
         },
@@ -146,7 +165,8 @@ export class AuthService {
       return responseLogin;
 
     } catch (error) {
-      badResponse.message = error.message;
+      const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
       return badResponse;
     }
   }

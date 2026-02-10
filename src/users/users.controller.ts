@@ -28,20 +28,20 @@ export class UsersController {
         return await this.userService.getInfoUser(user);
     }
 
-    @Roles('Administrador', 'Lider Instructor', 'Instructor')
-    @Get('/info/:id')
+    // @Roles('Administrador', 'Líder Instructor', 'Instructor')
+    @Get('/detail/:id')
     async getAllInfoByUser(@Param('id', ParseIntPipe) id: number, @CurrentUser() user) {
         return await this.userService.getAllInfoByUser(id, user);
     }
 
     @Get('/roles')
-    async getRoles() {
-        return await this.userService.getRoles();
+    async getRoles(@CurrentUser() user) {
+        return await this.userService.getRoles(user);
     }
 
     @Get('/form')
-    async getUserFormOptions() {
-        return await this.userService.getUserFormOptions();
+    async getUserFormOptions(@CurrentUser() user) {
+        return await this.userService.getUserFormOptions(user);
     }
 
     @Post()
@@ -73,15 +73,53 @@ export class UsersController {
             cb(null, true);
         }
     }))
-    async createUser(@Req() req: any, @Body() user: UsersDTO, @UploadedFile() file?: Express.Multer.File) {
+    async createUser(
+        @Req() req: any, 
+        @Body() newUser: UsersDTO, 
+        @CurrentUser() user,
+        @UploadedFile() file?: Express.Multer.File, 
+        ) {
         const profileImg = file ? `/api/public/uploads/users/${file.filename}` : (req.existingFile || '');
 
-        return await this.userService.createUser(user, profileImg);
+        return await this.userService.createUser(newUser, profileImg, user);
     }
 
     @Put('/:id')
-    async updateUser(@Param('id', ParseIntPipe) id: number, @Body() user: UsersDTO) {
-        return await this.userService.updateUser(user, id, '');
+    @UseInterceptors(FileInterceptor('profileImg', {
+        storage: diskStorage({
+            destination: (req, file, cb) => {
+                const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'users');
+                if (!fs.existsSync(uploadPath)) {
+                    fs.mkdirSync(uploadPath, { recursive: true });
+                }
+                cb(null, uploadPath);
+            },
+            filename: (req, file, cb) => {
+                const original = file.originalname;
+                const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                cb(null, safeName);
+            }
+        }),
+        limits: { files: 1 },
+        fileFilter: (req, file, cb) => {
+            const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'users');
+            const original = file.originalname;
+            const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+            const fullPath = join(uploadPath, safeName);
+            if (fs.existsSync(fullPath)) {
+                req.existingFile = `/api/public/uploads/users/${safeName}`;
+                return cb(null, false);
+            }
+            cb(null, true);
+        }
+    }))
+    async updateUser(
+        @Req() req: any,
+        @Param('id', ParseIntPipe) 
+        id: number, @Body() user: UsersDTO, 
+        @UploadedFile() file?: Express.Multer.File) {
+        const profileImg = file ? `/api/public/uploads/users/${file.filename}` : (req.existingFile || '');
+        return await this.userService.updateUser(user, id, profileImg);
     }
 
     @Put('/change-password')
