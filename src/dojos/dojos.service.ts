@@ -19,7 +19,13 @@ export class DojosService {
         return await this.prismaService.dojos.findMany({
             where,
             orderBy: { id: 'asc' },
-            include: {
+            select: {
+                id: true,
+                dojo: true,
+                address: true,
+                logo: true,
+                code: true,
+
                 dojoMartialArts: {
                     include: { martialArt: true }
                 }
@@ -30,6 +36,101 @@ export class DojosService {
                 dojoMartialArts: dojo.dojoMartialArts.map(dma => dma.martialArt)
             }))
         })
+    }
+
+
+    async getFullInfoDojo(code: string) {
+        const dojoInfo = await this.prismaService.dojos.findFirst({
+            where: { code },
+            orderBy: { id: 'asc' },
+            include: {
+                dojoMartialArts: {
+                    include: { martialArt: true }
+                },
+                Schedules: {
+                    select: {
+                        id: true,
+                        name: true,
+                        day:true, 
+                        startTime: true,
+                        endTime: true,
+                        martialArts: {
+                            select: {
+                                id: true,
+                                martialArt: true,
+                                icon: true
+                            }
+                        },
+                    }
+                },
+                dojoImages: true,
+            }
+        });
+
+        if (!dojoInfo) {
+            return {
+                ...badResponse,
+                message: 'Dojo no encontrado'
+            };
+        }
+
+        const [totalStudents, usersByRole] = await Promise.all([
+            this.prismaService.users.count({
+                where: {
+                    dojoId: dojoInfo.id,
+                    rol: { rol: 'Estudiante' },
+                    active: true,
+                    deleted: false,
+                }
+            }),
+            this.prismaService.users.findMany({
+                where: {
+                    dojoId: dojoInfo.id,
+                    active: true,
+                    deleted: false,
+                    rol: {
+                        rol: {
+                            in: ['Líder Instructor', 'Instructor']
+                        }
+                    }
+                },
+                select: {
+                    id: true,
+                    identification: true,
+                    name: true,
+                    profileImg: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                    userRanks: {
+                        select: {
+                            rank: true,
+                            martialArt: {
+                                select: {
+                                    martialArt: true,
+                                    icon: true,
+                                }
+                            }
+                        }
+                    },
+                    rol: {
+                        select: {
+                            rol: true,
+                        }
+                    }
+                },
+                orderBy: {
+                    id: 'asc'
+                }
+            })
+        ]);
+
+        return {
+            ...dojoInfo,
+            dojoMartialArts: dojoInfo.dojoMartialArts.map(dma => dma.martialArt),
+            totalStudents,
+            masters: usersByRole,
+        };
     }
 
     async getMartialArts(user: UserTokenDecode) {
@@ -295,7 +396,7 @@ export class DojosService {
     async addDojoImages(data: DojoImagesDto) {
         try {
             const created = await this.prismaService.dojoImages.createMany({
-                data: data.urls.map(url => ({ dojoId: data.dojoId, url })),
+                data: data.urls.map(url => ({ dojoId: data.dojoId, type: data.type, url })),
                 skipDuplicates: true,
             });
             baseResponse.data = created;
@@ -349,17 +450,22 @@ export class DojosService {
     }
 
     // 2. Registrar la asistencia masiva
-    async markBulkAttendance(data: MarkAttendanceDto) {
-        const { dojoId, scheduleId, userIds } = data;
+    async markBulkAttendance(data: MarkAttendanceDto, user: UserTokenDecode) {
+        const { scheduleId, userIds, reason, came } = data;
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Normalizamos a inicio del día para evitar duplicados diarios
+
+        const dojoId = user.rol.rol === 'Administrador' ? data.dojoId : user.dojoId; // Si es admin, puede marcar para cualquier dojo, si no, solo para su dojo
 
         // Creamos los registros en una transacción de base de datos
         const attendanceRecords = userIds.map(userId => ({
             userId,
             dojoId,
+            reason,
+            came,
             scheduleId,
             attendanceDate: new Date(), // Fecha y hora exacta del marcado
+            markedBy: user.id, // ID del usuario que marcó la asistencia
         }));
 
         return this.prismaService.dojoAttendance.createMany({

@@ -67,7 +67,7 @@ export class UsersController {
             const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const fullPath = join(uploadPath, safeName);
             if (fs.existsSync(fullPath)) {
-                req.existingFile = `/api/public/uploads/users/${safeName}`;
+                req.existingFile = `/uploads/users/${safeName}`;
                 return cb(null, false);
             }
             cb(null, true);
@@ -79,7 +79,7 @@ export class UsersController {
         @CurrentUser() user,
         @UploadedFile() file?: Express.Multer.File, 
         ) {
-        const profileImg = file ? `/api/public/uploads/users/${file.filename}` : (req.existingFile || '');
+        const profileImg = file ? `/uploads/users/${file.filename}` : (req.existingFile || '');
 
         return await this.userService.createUser(newUser, profileImg, user);
     }
@@ -107,7 +107,7 @@ export class UsersController {
             const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const fullPath = join(uploadPath, safeName);
             if (fs.existsSync(fullPath)) {
-                req.existingFile = `/api/public/uploads/users/${safeName}`;
+                req.existingFile = `/uploads/users/${safeName}`;
                 return cb(null, false);
             }
             cb(null, true);
@@ -118,7 +118,7 @@ export class UsersController {
         @Param('id', ParseIntPipe) 
         id: number, @Body() user: UsersDTO, 
         @UploadedFile() file?: Express.Multer.File) {
-        const profileImg = file ? `/api/public/uploads/users/${file.filename}` : (req.existingFile || '');
+        const profileImg = file ? `/uploads/users/${file.filename}` : (req.existingFile || '');
         return await this.userService.updateUser(user, id, profileImg);
     }
 

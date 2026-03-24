@@ -6,6 +6,7 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { UserTokenDecode } from '@/users/users.dto';
 
 @Controller('dojos')
 export class DojosController {
@@ -16,8 +17,16 @@ export class DojosController {
 
     @Get()
     getDojos(
-        @Query('dojoId') dojoId?: string) {
+        @Query('dojoId') dojoId?: string,
+    ) {
         return this.dojosService.getDojos(dojoId);
+    }
+
+    @Get('/info/:code')
+    getFullInfoDojo(
+        @Param('code') code: string,
+    ) {
+        return this.dojosService.getFullInfoDojo(code);
     }
 
     @Get('/martial-arts')
@@ -53,14 +62,14 @@ export class DojosController {
             const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const fullPath = join(uploadPath, safeName);
             if (fs.existsSync(fullPath)) {
-                req.existingFile = `/api/public/uploads/dojos/${safeName}`;
+                req.existingFile = `/uploads/dojos/${safeName}`;
                 return cb(null, false);
             }
             cb(null, true);
         }
     }))
     createDojo(@Req() req: any, @Body() dojoData: DojoDto, @UploadedFile() file?: Express.Multer.File) {
-        const logo = file ? `/api/public/uploads/dojos/${file.filename}` : (req.existingFile || '');
+        const logo = file ? `/uploads/dojos/${file.filename}` : (req.existingFile || '');
         return this.dojosService.createDojo(dojoData, logo);
     }
 
@@ -117,11 +126,12 @@ export class DojosController {
         })
     }))
     addDojoImages(
-        @Body('dojoId', ParseIntPipe) dojoId: number,
+        @Query('dojoId', ParseIntPipe) dojoId: number,
+        @Query('type') type: string,
         @UploadedFiles() files: Express.Multer.File[],
     ) {
         const urls = files.map(file => `/uploads/dojos/${file.filename}`);
-        const payload: DojoImagesDto = { dojoId, urls };
+        const payload: DojoImagesDto = { dojoId, type, urls };
         return this.dojosService.addDojoImages(payload);
     }
 
@@ -137,15 +147,15 @@ export class DojosController {
         return await this.dojosService.getAttendanceDojo(attendanceDojo);
     }
 
-    @Get('/attendance/current-class/:dojoId')
-    async getCurrentClass(@Param('dojoId') dojoId: string) {
-        const schedule = await this.dojosService.getCurrentSchedule(+dojoId);
+    @Get('/attendance/current-class')
+    async getCurrentClass(@CurrentUser() user: UserTokenDecode) {
+        const schedule = await this.dojosService.getCurrentSchedule(user.dojoId);
         if (!schedule) throw new BadRequestException('No hay clases activas en este momento');
         return schedule;
     }
 
     @Post('/attendance/mark')
-    async mark(@Body() markAttendanceDto: MarkAttendanceDto) {
-        return this.dojosService.markBulkAttendance(markAttendanceDto);
+    async mark(@CurrentUser() user: UserTokenDecode, @Body() markAttendanceDto: MarkAttendanceDto) {
+        return this.dojosService.markBulkAttendance(markAttendanceDto, user);
     }
 }

@@ -1,5 +1,5 @@
 import { Transform, Type } from "class-transformer";
-import { IsArray, IsDate, IsNumber, IsString, Max, Min, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsDate, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from "class-validator";
 
 export class DojoDto {
     @IsString()
@@ -69,6 +69,14 @@ export class MarkAttendanceDto {
     @IsNumber()
     dojoId!: number;
 
+    @IsString()
+    @IsOptional()
+    reason?: string;
+
+    @IsBoolean()
+    @IsOptional()
+    came?: boolean;
+
     @IsNumber()
     scheduleId!: number; // El ID del horario detectado o seleccionado
 
@@ -80,6 +88,9 @@ export class MarkAttendanceDto {
 export class DojoImagesDto {
     @IsNumber()
     dojoId!: number;
+
+    @IsString()
+    type!: string;
 
     @IsArray()
     @IsString({ each: true })
