@@ -15,6 +15,10 @@ const routesIgnores = [
   '/api/dojos',
 ];
 
+const routesIgnoresByPrefix = [
+  '/api/dojos/info/',
+];
+
 @Injectable()
 export class AuthGuard implements CanActivate {
 
@@ -22,8 +26,14 @@ export class AuthGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const request: Request = context.switchToHttp().getRequest();
+    const requestPath = request.url.split('?')[0];
 
-    if (routesIgnores.includes(request.url)) return true;
+    if (
+      routesIgnores.includes(requestPath) ||
+      routesIgnoresByPrefix.some(prefix => requestPath.startsWith(prefix))
+    ) {
+      return true;
+    }
 
     const authHeader = request.headers['authorization'];
     if (!authHeader) throw new UnauthorizedException('Token no enviado');

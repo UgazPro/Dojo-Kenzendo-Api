@@ -12,15 +12,25 @@ datasource db {
 //--------------------//-------Dojo---------//--------------------//
 
 model Dojos {
-  id              Int               @id @default(autoincrement())
-  dojo            String
-  phone           String            @default("")
-  description     String            @default("")
-  address         String
-  logo            String            @default("")
-  latitude        Float // Guardará algo como 10.6447
-  longitude       Float // Guardará algo como -71.6104
-  code            String
+  id        Int    @id @default(autoincrement())
+  dojo      String
+  logo      String @default("")
+  latitude  Float // Guardará algo como 10.6447
+  longitude Float // Guardará algo como -71.6104
+  code      String @unique
+
+  email        String @default("")
+  addressShort String @default("")
+  address      String
+  phone        String @default("")
+  description  String @default("")
+
+  founded   DateTime @default(now())
+  slogan    String   @default("")
+  translate String   @default("")
+
+  socialMedia Json @default("[]")
+
   createdAt       DateTime          @default(now())
   Activities      Activities[]
   DojoAttendance  DojoAttendance[]
@@ -33,10 +43,12 @@ model Dojos {
 }
 
 model DojoImages {
-  id     Int    @id @default(autoincrement())
-  dojoId Int
-  url    String
-  dojo   Dojos  @relation(fields: [dojoId], references: [id])
+  id          Int    @id @default(autoincrement())
+  dojoId      Int
+  type        String
+  description String @default("")
+  url         String
+  dojo        Dojos  @relation(fields: [dojoId], references: [id])
 }
 
 model DojoMartialArts {
@@ -53,13 +65,17 @@ model DojoAttendance {
   id             Int      @id @default(autoincrement())
   userId         Int
   dojoId         Int
+  reason         String   @default("")
+  came           Boolean  @default(true) // true = asistió, false = no asistió
   scheduleId     Int
+  markedBy       Int
   attendanceDate DateTime @default(now())
 
   // Relaciones
-  user     Users     @relation(fields: [userId], references: [id])
-  dojo     Dojos     @relation(fields: [dojoId], references: [id])
-  schedule Schedules @relation(fields: [scheduleId], references: [id])
+  markedByUser Users     @relation("markedBy", fields: [markedBy], references: [id])
+  user         Users     @relation(fields: [userId], references: [id])
+  dojo         Dojos     @relation(fields: [dojoId], references: [id])
+  schedule     Schedules @relation(fields: [scheduleId], references: [id])
 
   // --- ÍNDICES OPTIMIZADOS ---
 
@@ -136,7 +152,7 @@ model Users {
   enrollmentDate     DateTime
   activityAttendance ActivityAttendance[]
   AppliedStudents    AppliedStudents[]
-  DojoAttendance     DojoAttendance[]
+  markedBy           DojoAttendance[]     @relation("markedBy")
   Exams              Exams[]
   Payments           Payments[]
   representedUsers   Representatives[]    @relation("Representative")
@@ -144,6 +160,7 @@ model Users {
   dojo               Dojos                @relation(fields: [dojoId], references: [id])
   rol                Roles                @relation(fields: [rolId], references: [id])
   userRanks          UserRanks[]
+  dojoAttendances    DojoAttendance[]
 }
 
 model UserRanks {
