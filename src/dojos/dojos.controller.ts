@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UploadedFile, UploadedFiles, UseInterceptors, Req } from '@nestjs/common';
 import { DojosService } from './dojos.service';
 import { AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
-import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
@@ -10,6 +10,14 @@ import { UserTokenDecode } from '@/users/users.dto';
 
 @Controller('dojos')
 export class DojosController {
+    private parseDojoData(dojoDataRaw: string): DojoDto {
+        try {
+            return JSON.parse(dojoDataRaw) as DojoDto;
+        } catch {
+            throw new BadRequestException('El campo dojoData debe ser un JSON valido');
+        }
+    }
+
 
     constructor(private readonly dojosService: DojosService) {
 
@@ -40,7 +48,10 @@ export class DojosController {
     }
 
     @Post()
-    @UseInterceptors(FileInterceptor('image', {
+    @UseInterceptors(FileFieldsInterceptor([
+        { name: 'logo', maxCount: 1 },
+        { name: 'banner', maxCount: 1 },
+    ], {
         storage: diskStorage({
             destination: (req, file, cb) => {
                 const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'dojos');
@@ -55,27 +66,87 @@ export class DojosController {
                 cb(null, safeName);
             }
         }),
-        limits: { files: 1 },
+        limits: { files: 2 },
         fileFilter: (req, file, cb) => {
             const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'dojos');
             const original = file.originalname;
             const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
             const fullPath = join(uploadPath, safeName);
             if (fs.existsSync(fullPath)) {
-                req.existingFile = `/uploads/dojos/${safeName}`;
+                req.existingFiles = req.existingFiles || {};
+                req.existingFiles[file.fieldname] = `/uploads/dojos/${safeName}`;
                 return cb(null, false);
             }
             cb(null, true);
         }
     }))
-    createDojo(@Req() req: any, @Body() dojoData: DojoDto, @UploadedFile() file?: Express.Multer.File) {
-        const logo = file ? `/uploads/dojos/${file.filename}` : (req.existingFile || '');
-        return this.dojosService.createDojo(dojoData, logo);
+    createDojo(
+        @Req() req: any,
+        @Body('dojoData') dojoDataRaw: string,
+        @UploadedFiles() files: { logo?: Express.Multer.File[], banner?: Express.Multer.File[] },
+    ) {
+        const dojoData = this.parseDojoData(dojoDataRaw);
+        const logo = files?.logo?.[0]
+            ? `/uploads/dojos/${files.logo[0].filename}`
+            : (req.existingFiles?.logo || '');
+        const banner = files?.banner?.[0]
+            ? `/uploads/dojos/${files.banner[0].filename}`
+            : (req.existingFiles?.banner || '');
+
+        if (!logo) {
+            throw new BadRequestException('El logo es obligatorio y no fue enviado en form-data con la clave "logo"');
+        }
+
+        return this.dojosService.createDojo(dojoData, logo, banner);
     }
 
-    @Put()
-    updateDojo(@Param('id', ParseIntPipe) id: number, @Body() dojoData: DojoDto) {
-        return this.dojosService.updateDojo(dojoData, id);
+    @Put('/:id')
+    @UseInterceptors(FileFieldsInterceptor([
+        { name: 'logo', maxCount: 1 },
+        { name: 'banner', maxCount: 1 },
+    ], {
+        storage: diskStorage({
+            destination: (req, file, cb) => {
+                const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'dojos');
+                if (!fs.existsSync(uploadPath)) {
+                    fs.mkdirSync(uploadPath, { recursive: true });
+                }
+                cb(null, uploadPath);
+            },
+            filename: (req, file, cb) => {
+                const original = file.originalname;
+                const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                cb(null, safeName);
+            }
+        }),
+        fileFilter: (req, file, cb) => {
+            const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'dojos');
+            const original = file.originalname;
+            const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+            const fullPath = join(uploadPath, safeName);
+            if (fs.existsSync(fullPath)) {
+                req.existingFiles = req.existingFiles || {};
+                req.existingFiles[file.fieldname] = `/uploads/dojos/${safeName}`;
+                return cb(null, false);
+            }
+            cb(null, true);
+        }
+    }))
+    updateDojo(
+        @Req() req: any,
+        @Param('id', ParseIntPipe) id: number,
+        @Body('dojoData') dojoDataRaw: string,
+        @UploadedFiles() files: { logo?: Express.Multer.File[], banner?: Express.Multer.File[] },
+    ) {
+        const dojoData = this.parseDojoData(dojoDataRaw);
+        const logo = files?.logo?.[0]
+            ? `/uploads/dojos/${files.logo[0].filename}`
+            : req.existingFiles?.logo;
+        const banner = files?.banner?.[0]
+            ? `/uploads/dojos/${files.banner[0].filename}`
+            : req.existingFiles?.banner;
+
+        return this.dojosService.updateDojo(dojoData, id, logo, banner);
     }
 
     @Delete('/:id')

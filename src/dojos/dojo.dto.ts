@@ -1,17 +1,39 @@
 import { Transform, Type } from "class-transformer";
 import { IsArray, IsBoolean, IsDate, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from "class-validator";
 
+export class SocialMediaDto {
+    @IsString()
+    socialMedia!: string;
+
+    @IsString()
+    link!: string;
+}
+
 export class DojoDto {
     @IsString()
     dojo!: string;
     @IsString()
     address!: string;
     @IsString()
+    addressShort!: string;
+    @IsString()
     code!: string;
     @IsString()
     phone!: string;
     @IsString()
+    email!: string;
+    @IsString()
     description!: string;
+
+    @IsDate()
+    @Transform(({ value }) => new Date(value))
+    founded!: Date;
+
+    @IsString()
+    slogan!: string;
+
+    @IsString()
+    translate!: string;
 
     @Type(() => Number)
     @IsNumber()
@@ -25,10 +47,15 @@ export class DojoDto {
     @Max(180)
     longitude!: number;
 
-
     @Type(() => Number)
     @IsNumber({}, { each: true })
     martialArts!: number[];
+
+    @IsOptional()
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => SocialMediaDto)
+    socialMedia?: SocialMediaDto[];
 }
 
 export class ScheduleDojoDTO {

@@ -29,7 +29,7 @@ model Dojos {
   slogan    String   @default("")
   translate String   @default("")
 
-  // socialMedia 
+  socialMedia Json @default("[]")
 
   createdAt       DateTime          @default(now())
   Activities      Activities[]
@@ -43,11 +43,12 @@ model Dojos {
 }
 
 model DojoImages {
-  id     Int    @id @default(autoincrement())
-  dojoId Int
-  type   String
-  url    String
-  dojo   Dojos  @relation(fields: [dojoId], references: [id])
+  id          Int    @id @default(autoincrement())
+  dojoId      Int
+  type        String
+  description String @default("")
+  url         String
+  dojo        Dojos  @relation(fields: [dojoId], references: [id])
 }
 
 model DojoMartialArts {

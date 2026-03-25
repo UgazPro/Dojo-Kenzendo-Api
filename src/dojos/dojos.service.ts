@@ -3,11 +3,19 @@ import { Injectable } from '@nestjs/common';
 import { AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
 import { UserTokenDecode } from '@/users/users.dto';
+import { Prisma } from '@/generated/prisma/client';
 
 @Injectable()
 export class DojosService {
 
     constructor(private readonly prismaService: PrismaService) { }
+
+    private toSocialMediaJson(socialMedia?: DojoDto['socialMedia']): Prisma.InputJsonValue {
+        return (socialMedia ?? []).map(item => ({
+            socialMedia: item.socialMedia,
+            link: item.link,
+        })) as Prisma.InputJsonValue;
+    }
 
     async getDojos(dojoId?: string) {
         const where: any = {};
@@ -51,7 +59,7 @@ export class DojosService {
                     select: {
                         id: true,
                         name: true,
-                        day:true, 
+                        day: true,
                         startTime: true,
                         endTime: true,
                         martialArts: {
@@ -179,18 +187,31 @@ export class DojosService {
         }
     }
 
-    async createDojo(dojoData: DojoDto, logo: string) {
+    async createDojo(dojoData: DojoDto, logo: string, banner: string) {
         try {
             const dojo = await this.prismaService.dojos.create({
                 data: {
                     dojo: dojoData.dojo,
                     address: dojoData.address,
+                    addressShort: dojoData.addressShort,
                     latitude: dojoData.latitude,
                     longitude: dojoData.longitude,
                     logo: logo,
                     code: dojoData.code,
                     phone: dojoData.phone,
-                    description: dojoData.description
+                    email: dojoData.email,
+                    description: dojoData.description,
+                    founded: dojoData.founded,
+                    slogan: dojoData.slogan,
+                    translate: dojoData.translate,
+                    socialMedia: this.toSocialMediaJson(dojoData.socialMedia)
+                }
+            });
+            await this.prismaService.dojoImages.create({
+                data: {
+                    dojoId: dojo.id,
+                    type: 'banner',
+                    url: banner,
                 }
             });
             await this.prismaService.dojoMartialArts.createMany({
@@ -212,20 +233,41 @@ export class DojosService {
         }
     }
 
-    async updateDojo(dojoData: DojoDto, id: number) {
+    async updateDojo(dojoData: DojoDto, id: number, logo?: string, banner?: string) {
         try {
             const dojo = await this.prismaService.dojos.update({
                 where: { id },
                 data: {
                     dojo: dojoData.dojo,
                     address: dojoData.address,
+                    addressShort: dojoData.addressShort,
                     latitude: dojoData.latitude,
                     longitude: dojoData.longitude,
+                    logo,
                     code: dojoData.code,
                     phone: dojoData.phone,
-                    description: dojoData.description
+                    email: dojoData.email,
+                    description: dojoData.description,
+                    founded: dojoData.founded,
+                    slogan: dojoData.slogan,
+                    translate: dojoData.translate,
+                    socialMedia: this.toSocialMediaJson(dojoData.socialMedia)
                 }
             });
+            if (banner) {
+                const findBanner = await this.prismaService.dojoImages.findFirst({
+                    where: { dojoId: dojo.id, type: 'banner' },
+                });
+
+                if (findBanner) {
+                    await this.prismaService.dojoImages.update({
+                        where: { id: findBanner.id, type: 'banner' },
+                        data: {
+                            url: banner,
+                        }
+                    });
+                }
+            }
             await this.prismaService.dojoMartialArts.updateMany({
                 data: dojoData.martialArts.map(martialArtId => ({
                     martialArtId,
