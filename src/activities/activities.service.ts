@@ -47,7 +47,7 @@ export class ActivitiesService {
                 where,
                 include: {
                     ActivityDojos: {
-                        include: {
+                        select: {
                             dojo: {
                                 select: {
                                     id: true,
@@ -57,7 +57,6 @@ export class ActivitiesService {
                             }
                         }
                     },
-                    dojos: true,
                 }
             });
             return activities;
@@ -101,7 +100,6 @@ export class ActivitiesService {
                             }
                         }
                     },
-                    dojos: true,
                 }
             });
             return activity;
@@ -133,25 +131,27 @@ export class ActivitiesService {
                     latitude: activity.latitude,
                     longitude: activity.longitude,
                     price: activity.price,
-                    dojosId: activity.dojosId ?? null,
                 }
             });
 
-            if (activity.dojoIds?.length) {
-                await this.prismaService.activityDojos.createMany({
-                    data: activity.dojoIds.map(dojoId => ({
-                        dojoId,
-                        activityId: created.id,
-                    })),
-                    skipDuplicates: true,
-                });
-            }
+            await this.prismaService.activityDojos.createMany({
+                data: activity.dojoIds.map(dojoId => ({
+                    dojoId,
+                    activityId: created.id,
+                })),
+                skipDuplicates: true,
+            });
 
             const newActivity = await this.prismaService.activities.findUnique({
                 where: { id: created.id },
                 include: {
-                    ActivityDojos: true,
-                    dojos: true,
+                    ActivityDojos: {
+                        select: {
+                            dojo: {
+                                select: { id: true, dojo: true, address: true },
+                            }
+                        }
+                    },
                 }
             });
 
@@ -186,25 +186,29 @@ export class ActivitiesService {
                     description: activity.description,
                     latitude: activity.latitude,
                     longitude: activity.longitude,
-                    dojosId: activity.dojosId ?? null,
                 }
             });
 
-            if (activity.dojoIds) {
-                await this.prismaService.activityDojos.deleteMany({ where: { activityId: id } });
-                if (activity.dojoIds.length) {
-                    await this.prismaService.activityDojos.createMany({
-                        data: activity.dojoIds.map(dojoId => ({ dojoId, activityId: id })),
-                        skipDuplicates: true,
-                    });
-                }
+
+            await this.prismaService.activityDojos.deleteMany({ where: { dojoId: { in: activity.dojoIds } } });
+
+            if (activity.dojoIds.length) {
+                await this.prismaService.activityDojos.createMany({
+                    data: activity.dojoIds.map(dojoId => ({ dojoId, activityId: id })),
+                    skipDuplicates: true,
+                });
             }
 
             const updated = await this.prismaService.activities.findUnique({
                 where: { id },
                 include: {
-                    ActivityDojos: true,
-                    dojos: true,
+                    ActivityDojos: {
+                        select: {
+                            dojo: {
+                                select: { id: true, dojo: true, address: true },
+                            }
+                        }
+                    },
                 }
             });
 

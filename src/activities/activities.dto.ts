@@ -60,14 +60,9 @@ export class ActivityDto {
     @Max(180)
     longitude!: number;
 
-    @IsOptional()
-    @IsNumber()
-    dojosId?: number;
-
-    @IsOptional()
     @IsArray()
     @IsNumber({}, { each: true })
-    dojoIds?: number[];
+    dojoIds!: number[];
 }
 
 export class MarkActivityAttendanceDto {
