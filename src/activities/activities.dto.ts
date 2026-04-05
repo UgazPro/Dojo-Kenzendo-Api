@@ -32,6 +32,13 @@ export class ActivityDto {
     @IsString()
     name!: string;
 
+    @IsString()
+    type!: string;
+
+    @IsString()
+    @IsOptional()
+    description!: string;
+
     @IsDate()
     @Transform(({ value }) => new Date(value))
     date!: Date;
@@ -40,6 +47,7 @@ export class ActivityDto {
     place!: string;
 
     @IsNumber()
+    @IsOptional()
     price!: number;
 
     @IsNumber()
