@@ -32,6 +32,13 @@ export class ActivityDto {
     @IsString()
     name!: string;
 
+    @IsString()
+    type!: string;
+
+    @IsString()
+    @IsOptional()
+    description!: string;
+
     @IsDate()
     @Transform(({ value }) => new Date(value))
     date!: Date;
@@ -40,6 +47,7 @@ export class ActivityDto {
     place!: string;
 
     @IsNumber()
+    @IsOptional()
     price!: number;
 
     @IsNumber()
@@ -52,14 +60,9 @@ export class ActivityDto {
     @Max(180)
     longitude!: number;
 
-    @IsOptional()
-    @IsNumber()
-    dojosId?: number;
-
-    @IsOptional()
     @IsArray()
     @IsNumber({}, { each: true })
-    dojoIds?: number[];
+    dojoIds!: number[];
 }
 
 export class MarkActivityAttendanceDto {

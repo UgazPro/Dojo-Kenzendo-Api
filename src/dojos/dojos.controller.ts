@@ -90,7 +90,7 @@ export class DojosController {
             ? `/uploads/dojos/${files.logo[0].filename}`
             : (req.existingFiles?.logo || '');
         const banner = files?.banner?.[0]
-            ? `/uploads/dojos/${files.banner[0].filename}`
+        ? `/uploads/dojos/${files.banner[0].filename}`
             : (req.existingFiles?.banner || '');
 
         if (!logo) {
