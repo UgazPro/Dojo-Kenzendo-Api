@@ -14,6 +14,7 @@ export class DojosService {
         return (socialMedia ?? []).map(item => ({
             socialMedia: item.socialMedia,
             link: item.link,
+            directUrl: item.directUrl,
         })) as Prisma.InputJsonValue;
     }
 
@@ -371,7 +372,25 @@ export class DojosService {
                 }))
             });
 
-            baseResponse.data = newSchedule;
+            const scheduleUpdated = await this.prismaService.schedules.findMany({
+                where: { dojoId: schedule.schedule[0].dojoId },
+                select: {
+                    id: true,
+                    name: true,
+                    day: true,
+                    startTime: true,
+                    endTime: true,
+                    martialArts: {
+                        select: {
+                            id: true,
+                            martialArt: true,
+                            icon: true
+                        }
+                    },
+                }
+            })
+
+            baseResponse.data = scheduleUpdated;
             baseResponse.message = 'Horario del dojo creado correctamente';
             return baseResponse;
         } catch (err) {

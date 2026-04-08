@@ -32,7 +32,6 @@ model Dojos {
   socialMedia Json @default("[]")
 
   createdAt       DateTime          @default(now())
-  Activities      Activities[]
   DojoAttendance  DojoAttendance[]
   PaymentMethods  PaymentMethods[]
   Schedules       Schedules[]
@@ -161,6 +160,7 @@ model Users {
   rol                Roles                @relation(fields: [rolId], references: [id])
   userRanks          UserRanks[]
   dojoAttendances    DojoAttendance[]
+  directives         Directive[]
 }
 
 model UserRanks {
@@ -190,6 +190,13 @@ model Roles {
   Users Users[]
 }
 
+model Directive {
+  id     Int    @id @default(autoincrement())
+  title  String
+  userId Int
+  user   Users  @relation(fields: [userId], references: [id])
+}
+
 //--------------------//-------Activities-------//--------------------//
 
 model Activities {
@@ -211,8 +218,6 @@ model Activities {
   activityAttendance ActivityAttendance[]
   AppliedStudents    AppliedStudents[]
   Exams              Exams[]
-  dojos              Dojos?               @relation(fields: [dojosId], references: [id])
-  dojosId            Int?
   activitiesImages   ActivitiesImages[]
 }
 

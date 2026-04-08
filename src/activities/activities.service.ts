@@ -190,7 +190,7 @@ export class ActivitiesService {
             });
 
 
-            await this.prismaService.activityDojos.deleteMany({ where: { dojoId: { in: activity.dojoIds } } });
+            await this.prismaService.activityDojos.deleteMany({ where: { activityId: id } });
 
             if (activity.dojoIds.length) {
                 await this.prismaService.activityDojos.createMany({

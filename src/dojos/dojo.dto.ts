@@ -7,6 +7,10 @@ export class SocialMediaDto {
 
     @IsString()
     link!: string;
+
+    @IsString()
+    @IsOptional()
+    directUrl?: string;
 }
 
 export class DojoDto {
