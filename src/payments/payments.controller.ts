@@ -9,6 +9,31 @@ export class PaymentsController {
 
 	constructor(private readonly paymentsService: PaymentsService) { }
 
+	//Mensualidades
+	@Get('/monthly')
+	getMonthlyPayment(
+		@CurrentUser() user,
+		@Query('dojoId') dojoId: string) {
+		return this.paymentsService.getMonthlyPayment(user, dojoId);
+	}
+
+	@Roles('Líder Instructor', 'Administrador')
+	@Post('/monthly')
+	createMonthlyPayment(
+		@CurrentUser() user,
+		@Body() data: { amount: number; description?: string }) {
+		return this.paymentsService.createMonthlyPayment(user, data);
+	}
+
+	@Roles('Líder Instructor', 'Administrador')
+	@Put('/monthly/:id')
+	updateMonthlyPayment(
+		@CurrentUser() user,
+		@Param('id', ParseIntPipe) id: number,
+		@Body() data: { amount: number; description?: string }) {
+		return this.paymentsService.updateMonthlyPayment(user, id, data);
+	}
+
 	// Métodos de pago
 	@Get('/methods')
 	getPaymentMethods(

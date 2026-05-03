@@ -39,6 +39,7 @@ model Dojos {
   activityDojos   ActivityDojos[]
   dojoMartialArts DojoMartialArts[]
   dojoImages      DojoImages[]
+  monthlyPayments MonthlyPayments[]
 }
 
 model DojoImages {
@@ -209,6 +210,7 @@ model Activities {
   price       Float    @default(0)
   latitude    Float
   longitude   Float
+  deleted     Boolean  @default(false)
   createdDate DateTime @default(now())
 
   // Relación con la tabla intermedia
@@ -255,10 +257,18 @@ model Exams {
   userId       Int
   ranksId      Int
   activityId   Int
+  status       ExamStatus  @default(Aprobado) // Pendiente, Aprobado, Reprobado
   activity     Activities  @relation(fields: [activityId], references: [id])
   martialArt   MartialArts @relation(fields: [martialArtId], references: [id])
   ranks        Ranks       @relation(fields: [ranksId], references: [id])
   user         Users       @relation(fields: [userId], references: [id])
+  createdAt    DateTime    @default(now())
+}
+
+enum ExamStatus {
+  Pendiente
+  Aprobado
+  Reprobado
 }
 
 model AppliedStudents {
@@ -271,14 +281,25 @@ model AppliedStudents {
   martialArt   MartialArts @relation(fields: [martialArtId], references: [id])
   ranks        Ranks       @relation(fields: [ranksId], references: [id])
   user         Users       @relation(fields: [userId], references: [id])
+  createdAt    DateTime    @default(now())
 }
 
 //--------------------//------Payments-------//--------------------//
+
+model MonthlyPayments {
+  id          Int      @id @default(autoincrement())
+  dojoId      Int
+  amount      Int
+  description String   @default("")
+  createdDate DateTime @default(now())
+  dojo        Dojos    @relation(fields: [dojoId], references: [id])
+}
 
 model PaymentMethods {
   id             Int        @id @default(autoincrement())
   payment_method String
   bank           String
+  account        String     @default("")
   phone          String
   email          String
   identification String

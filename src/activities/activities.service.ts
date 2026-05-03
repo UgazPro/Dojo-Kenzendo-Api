@@ -2,6 +2,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
+import { UserTokenDecode } from '@/users/users.dto';
 
 @Injectable()
 export class ActivitiesService {
@@ -222,6 +223,36 @@ export class ActivitiesService {
         }
     }
 
+    async deleteActivity(id: number, user: UserTokenDecode) {
+        try {
+            const findActivity = await this.prismaService.activities.findUnique({ where: { id } });
+
+            if (!findActivity) {
+                badResponse.message = 'Actividad no encontrada';
+                return badResponse;
+            }
+
+            if (user.rol.rol !== 'Administrador') {
+                badResponse.message = 'No tienes permisos para eliminar esta actividad';
+                return badResponse;
+            }
+
+            await this.prismaService.activities.update({
+                where: { id },
+                data: {
+                    deleted: true,
+                }
+            });
+
+            baseResponse.message = 'Actividad eliminada correctamente';
+            return baseResponse;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
+            return badResponse;
+        }
+    }
+
     async getActivityAttendance(activityId: number) {
         try {
             const attendance = await this.prismaService.activityAttendance.findMany({
@@ -267,6 +298,7 @@ export class ActivitiesService {
         }
     }
 
+    //Historial de exámenes
     async getExams(activityId?: number, userId?: number, martialArtId?: number) {
         const where: any = {};
 
@@ -278,8 +310,14 @@ export class ActivitiesService {
             const exams = await this.prismaService.exams.findMany({
                 where,
                 include: {
-                    activity: true,
-                    martialArt: true,
+                    activity: {
+                        select: {
+                            id: true,
+                            name: true,
+                            description: true,
+                            date: true
+                        }
+                    },
                     user: {
                         select: {
                             id: true,
@@ -287,8 +325,13 @@ export class ActivitiesService {
                             lastName: true,
                         }
                     },
-                    ranks: true,
-                }
+                    ranks: {
+                        include: {
+                            martialArt: true,
+                        }
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
             });
             return exams;
         } catch (error) {
@@ -298,41 +341,35 @@ export class ActivitiesService {
         }
     }
 
-    async createExam(exam: ExamStudentsDto) {
+    async saveExam(exam: ExamStudentsDto) {
         try {
-            const created = await this.prismaService.exams.createMany({
-                data: exam.exams.map(item => ({
+            const getUsersApplied = await this.prismaService.appliedStudents.findMany({
+                where: {
+                    userId: { in: exam.exams.map(e => e.userId) },
+                    martialArtId: { in: exam.exams.map(e => e.martialArtId) },
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            await this.prismaService.exams.createMany({
+                data: getUsersApplied.map(item => ({
                     martialArtId: item.martialArtId,
                     userId: item.userId,
                     ranksId: item.ranksId,
                     activityId: item.activityId,
+                    status: exam.exams.find(e => e.userId === item.userId && e.martialArtId === item.martialArtId)?.status || 'Pendiente',
                 }))
             });
 
-            baseResponse.data = created;
-            baseResponse.message = 'Examen creado correctamente';
-            return baseResponse;
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            badResponse.message = message;
-            return badResponse;
-        }
-    }
-
-    async updateExam(id: number, exam: ExamDto) {
-        try {
-            const updated = await this.prismaService.exams.update({
-                where: { id },
-                data: {
-                    martialArtId: exam.martialArtId,
-                    userId: exam.userId,
-                    ranksId: exam.ranksId,
-                    activityId: exam.activityId,
+            await this.prismaService.appliedStudents.deleteMany({
+                where: {
+                    userId: { in: exam.exams.map(e => e.userId) },
+                    martialArtId: { in: exam.exams.map(e => e.martialArtId) },
                 }
             });
 
-            baseResponse.data = updated;
-            baseResponse.message = 'Examen actualizado correctamente';
+            baseResponse.data = null;
+            baseResponse.message = 'Examen creado correctamente';
             return baseResponse;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -352,8 +389,14 @@ export class ActivitiesService {
             const applied = await this.prismaService.appliedStudents.findMany({
                 where,
                 include: {
-                    activity: true,
-                    martialArt: true,
+                    activity: {
+                        select: {
+                            id: true,
+                            name: true,
+                            description: true,
+                            date: true
+                        }
+                    },
                     user: {
                         select: {
                             id: true,
@@ -374,17 +417,71 @@ export class ActivitiesService {
 
     async createAppliedStudent(data: AppliedStudentDto) {
         try {
+            const today = new Date();
+            today.setMonth(today.getMonth() - 8);
+
+            const findLastApplication = await this.prismaService.appliedStudents.findFirst({
+                where: {
+                    userId: data.userId,
+                    martialArtId: data.martialArtId,
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            const findLastExam = await this.prismaService.exams.findFirst({
+                where: {
+                    userId: data.userId,
+                    martialArtId: data.martialArtId,
+                    status: 'Aprobado',
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            const findFistRankPostulation = await this.prismaService.ranks.findFirst({
+                where: {
+                    martialArtId: data.martialArtId,
+                },
+                orderBy: { id: 'asc' },
+            });
+
+            if (findLastExam && findLastExam.createdAt > today) {
+                badResponse.message = 'Para poder postular a esta actividad, deben haber pasado al menos 8 meses desde el último examen en esta arte marcial.';
+                return badResponse;
+            }
+
+            if (findLastApplication && findLastApplication.createdAt > today) {
+                badResponse.message = 'Ya existe una postulación reciente para este usuario y arte marcial. Por favor espera antes de postular nuevamente.';
+                return badResponse;
+            }
+
+            const rankId = findLastExam ? findLastExam.ranksId + 1 : (Number(findFistRankPostulation?.id) + 1) || 1;
+
             const created = await this.prismaService.appliedStudents.create({
                 data: {
                     activityId: data.activityId,
                     userId: data.userId,
                     martialArtId: data.martialArtId,
-                    ranksId: data.ranksId,
+                    ranksId: rankId,
+                },
+                select: {
+                    id: true,
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            lastName: true,
+                        }
+                    },
+                    ranks: {
+                        include: {
+                            martialArt: true,
+                        }
+                    },
                 }
             });
 
             baseResponse.data = created;
-            baseResponse.message = 'Postulación creada correctamente';
+            baseResponse.message = `Estudiante ${created.user.name} ${created.user.lastName} postulado correctamente para el examen de ${created.ranks.martialArt.martialArt} a Cinturón ${created.ranks.belt} ${created.ranks.code}${created.ranks.rank_name ? ` (${created.ranks.rank_name})` : ''}`;
             return baseResponse;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -393,27 +490,27 @@ export class ActivitiesService {
         }
     }
 
-    async updateAppliedStudent(id: number, data: AppliedStudentDto) {
-        try {
-            const updated = await this.prismaService.appliedStudents.update({
-                where: { id },
-                data: {
-                    activityId: data.activityId,
-                    userId: data.userId,
-                    martialArtId: data.martialArtId,
-                    ranksId: data.ranksId,
-                }
-            });
+    // async updateAppliedStudent(id: number, data: AppliedStudentDto) {
+    //     try {
+    //         const updated = await this.prismaService.appliedStudents.update({
+    //             where: { id },
+    //             data: {
+    //                 activityId: data.activityId,
+    //                 userId: data.userId,
+    //                 martialArtId: data.martialArtId,
+    //                 ranksId: data.ranksId,
+    //             }
+    //         });
 
-            baseResponse.data = updated;
-            baseResponse.message = 'Postulación actualizada correctamente';
-            return baseResponse;
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            badResponse.message = message;
-            return badResponse;
-        }
-    }
+    //         baseResponse.data = updated;
+    //         baseResponse.message = 'Postulación actualizada correctamente';
+    //         return baseResponse;
+    //     } catch (error) {
+    //         const message = error instanceof Error ? error.message : String(error);
+    //         badResponse.message = message;
+    //         return badResponse;
+    //     }
+    // }
 
     // Images
     async getActivityImages(activityId: number) {

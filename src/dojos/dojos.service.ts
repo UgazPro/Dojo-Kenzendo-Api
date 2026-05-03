@@ -18,6 +18,42 @@ export class DojosService {
         })) as Prisma.InputJsonValue;
     }
 
+    private async syncDojoMartialArts(dojoId: number, martialArtIds: number[]) {
+        const uniqueIds = Array.from(new Set(martialArtIds));
+
+        const currentRelations = await this.prismaService.dojoMartialArts.findMany({
+            where: { dojoId },
+            select: { martialArtId: true }
+        });
+
+        const currentIds: Set<number> = new Set(currentRelations.map(item => item.martialArtId));
+        const requestedIds = new Set(uniqueIds);
+
+        const toCreate = uniqueIds.filter(id => !currentIds.has(id));
+        const toDelete = Array.from(currentIds).filter((id: number) => !requestedIds.has(id));
+
+        if (toCreate.length === 0 && toDelete.length === 0) {
+            return;
+        }
+
+        await this.prismaService.$transaction([
+            ...(toDelete.length > 0
+                ? [this.prismaService.dojoMartialArts.deleteMany({
+                    where: {
+                        dojoId,
+                        martialArtId: { in: toDelete }
+                    }
+                })]
+                : []),
+            ...(toCreate.length > 0
+                ? [this.prismaService.dojoMartialArts.createMany({
+                    data: toCreate.map(martialArtId => ({ dojoId, martialArtId })),
+                    skipDuplicates: true,
+                })]
+                : []),
+        ]);
+    }
+
     async getDojos(dojoId?: string) {
         const where: any = {};
 
@@ -267,22 +303,30 @@ export class DojosService {
                             url: banner,
                         }
                     });
+                } else {
+                    await this.prismaService.dojoImages.create({
+                        data: {
+                            dojoId: dojo.id,
+                            type: 'banner',
+                            url: banner,
+                        }
+                    });
                 }
             }
-            await this.prismaService.dojoMartialArts.updateMany({
-                data: dojoData.martialArts.map(martialArtId => ({
-                    martialArtId,
-                    dojoId: dojo.id,
-                })),
-            });
-            const newDojo = await this.prismaService.dojos.findUnique({
+
+            await this.syncDojoMartialArts(dojo.id, dojoData.martialArts);
+
+            const dojoUpdated = await this.prismaService.dojos.findUnique({
                 where: { id: dojo.id },
             })
-            baseResponse.data = newDojo;
+            baseResponse.data = dojoUpdated;
             baseResponse.message = 'Dojo actualizado correctamente';
             return baseResponse;
         }
         catch (error) {
+            console.log(error);
+            
+            badResponse.data = error;
             badResponse.message = 'Error al actualizar el dojo';
             return badResponse;
         }

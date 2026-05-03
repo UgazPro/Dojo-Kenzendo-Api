@@ -1,5 +1,6 @@
+import { ExamStatus } from '@/generated/prisma/enums';
 import { Transform, Type } from 'class-transformer';
-import { IsArray, IsDate, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsDate, IsEnum, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
 
 export class ActivityFilterDto {
     @IsOptional()
@@ -88,11 +89,8 @@ export class ExamDto {
     @IsNumber()
     userId!: number;
 
-    @IsNumber()
-    ranksId!: number;
-
-    @IsNumber()
-    activityId!: number;
+    @IsEnum(ExamStatus)
+    status!: ExamStatus;
 }
 
 export class AppliedStudentDto {
@@ -101,9 +99,6 @@ export class AppliedStudentDto {
 
     @IsNumber()
     userId!: number;
-
-    @IsNumber()
-    ranksId!: number;
 
     @IsNumber()
     activityId!: number;

@@ -11,11 +11,12 @@ export class PaymentMethodDto {
     bank!: string;
 
     @IsString()
-    @IsNotEmpty()
+    account!: string;
+
+    @IsString()
     phone!: string;
 
     @IsEmail()
-    @IsOptional()
     email?: string;
 
     @IsString()

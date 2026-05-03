@@ -11,6 +11,65 @@ export class PaymentsService {
 
     }
 
+    async getMonthlyPayment(user: UserTokenDecode, dojoId: string) {
+        const where: any = {};
+
+        if (user.rol && user.rol.rol !== 'Administrador') {
+            where.dojoId = user.dojoId;
+        } else {
+            if (dojoId) where.dojoId = Number(dojoId);
+        }
+
+        try {
+            return await this.prismaService.monthlyPayments.findMany({
+                where,
+                orderBy: { id: 'asc' },
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
+            return badResponse;
+        }
+    }
+
+    async createMonthlyPayment(user: UserTokenDecode, data: { amount: number; description?: string }) {
+        try {
+            const created = await this.prismaService.monthlyPayments.create({
+                data: {
+                    dojoId: user.dojoId,
+                    amount: data.amount,
+                    description: data.description ? data.description : '',
+                }
+            });
+            baseResponse.data = created;
+            baseResponse.message = 'Mensualidad creada correctamente';
+            return baseResponse;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
+            return badResponse;
+        }
+    }
+    async updateMonthlyPayment(user: UserTokenDecode, id: number, data: { amount: number; description?: string }) {
+        try {
+            const updated = await this.prismaService.monthlyPayments.update({
+                where: { id },
+                data: {
+                    dojoId: user.dojoId,
+                    amount: data.amount,
+                    description: data.description ? data.description : '',
+                }
+            });
+            baseResponse.data = updated;
+            baseResponse.message = 'Mensualidad actualizada correctamente';
+            return baseResponse;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
+            return badResponse;
+        }
+    }
+
     async getPaymentMethods(user: UserTokenDecode, dojoId: string) {
         const where: any = {};
 
@@ -41,7 +100,8 @@ export class PaymentsService {
                     payment_method: data.payment_method,
                     dojoId: user.dojoId,
                     email: data.email ? data.email : '',
-                    phone: data.phone,
+                    account: data.account ? data.account : '',
+                    phone: data.phone ? data.phone : '',
                     identification: data.identification,
                 },
             });
@@ -64,7 +124,8 @@ export class PaymentsService {
                     payment_method: data.payment_method,
                     dojoId: user.dojoId,
                     email: data.email ? data.email : '',
-                    phone: data.phone,
+                    account: data.account ? data.account : '',
+                    phone: data.phone ? data.phone : '',
                     identification: data.identification,
                 },
             });

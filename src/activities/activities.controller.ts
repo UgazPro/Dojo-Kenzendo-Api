@@ -5,6 +5,8 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { Roles } from '@/guards/roles/roles.decorator';
 
 @Controller('activities')
 export class ActivitiesController {
@@ -48,6 +50,15 @@ export class ActivitiesController {
         return this.activitiesService.updateActivity(id, activity);
     }
 
+    @Roles('Administrador')
+    @Delete('/:id')
+    deleteActivity(
+        @CurrentUser() user,
+        @Param('id', ParseIntPipe) id: number,
+    ) {
+        return this.activitiesService.deleteActivity(id, user);
+    }
+
     // Attendance
     @Get('/attendance/:activityId')
     getActivityAttendance(@Param('activityId', ParseIntPipe) activityId: number) {
@@ -74,16 +85,8 @@ export class ActivitiesController {
     }
 
     @Post('/exams')
-    createExam(@Body() exam: ExamStudentsDto) {
-        return this.activitiesService.createExam(exam);
-    }
-
-    @Put('/exams/:id')
-    updateExam(
-        @Param('id', ParseIntPipe) id: number,
-        @Body() exam: ExamDto,
-    ) {
-        return this.activitiesService.updateExam(id, exam);
+    saveExam(@Body() exam: ExamStudentsDto) {
+        return this.activitiesService.saveExam(exam);
     }
 
     // Applied students (postulaciones)
@@ -105,13 +108,13 @@ export class ActivitiesController {
         return this.activitiesService.createAppliedStudent(data);
     }
 
-    @Put('/applied-students/:id')
-    updateAppliedStudent(
-        @Param('id', ParseIntPipe) id: number,
-        @Body() data: AppliedStudentDto,
-    ) {
-        return this.activitiesService.updateAppliedStudent(id, data);
-    }
+    // @Put('/applied-students/:id')
+    // updateAppliedStudent(
+    //     @Param('id', ParseIntPipe) id: number,
+    //     @Body() data: AppliedStudentDto,
+    // ) {
+    //     return this.activitiesService.updateAppliedStudent(id, data);
+    // }
 
     // Images
     @Get('/images/:activityId')
