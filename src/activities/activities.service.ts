@@ -415,11 +415,63 @@ export class ActivitiesService {
         }
     }
 
+    async getAppliedStudentSuggestion({dojoId, user}: {dojoId?: number, user: UserTokenDecode}) {
+        try {
+
+            const where: any = {};
+
+            if(user.rol.rol !== 'Administrador') {
+                where.dojoId = user.dojoId;
+            } else if (dojoId) {
+                where.dojoId = dojoId;
+            }
+
+            const today = new Date();
+            const minDate: Date = new Date(today.setMonth(today.getMonth() - 8));
+            const studentsSuggestion = await this.prismaService.users.findMany({
+                where,
+                include: {
+                    AppliedStudents: true
+                }
+            }).then(users => {
+                return users.map(u => {
+                    return {
+                        ...u,
+                        suggested: u.AppliedStudents.some(a => a.createdAt >= minDate)  || u.enrollmentDate >= minDate ? false : true,
+                    }
+                })
+            })
+
+            return studentsSuggestion;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
+            return badResponse;
+        }
+    }
+
     async createAppliedStudent(data: AppliedStudentDto) {
         try {
             const today = new Date();
             today.setMonth(today.getMonth() - 8);
 
+            const findUser = await this.prismaService.users.findUnique({ where: { id: data.userId } });
+
+            const ageUser = findUser ? Math.floor((today.getTime() - findUser.birthday.getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : 0;
+
+            const validateEnrollment: boolean = findUser ? findUser.enrollmentDate <= today : false;
+
+            if (validateEnrollment) {
+                badResponse.message = 'El usuario debe tener al menos 8 meses de inscripción en la escuela para ser postulado.';
+                return badResponse;
+            }
+
+            if (ageUser !== null && ageUser < 5) {
+                badResponse.message = 'El usuario debe tener al menos 5 años para ser postulado.';
+                return badResponse;
+            }
+
+            //Buscar su ultima postulacion en el arte marcial 
             const findLastApplication = await this.prismaService.appliedStudents.findFirst({
                 where: {
                     userId: data.userId,
@@ -428,6 +480,7 @@ export class ActivitiesService {
                 orderBy: { createdAt: 'desc' },
             });
 
+            //Buscar su ultimo examen aprobado en el arte marcial
             const findLastExam = await this.prismaService.exams.findFirst({
                 where: {
                     userId: data.userId,
@@ -437,6 +490,7 @@ export class ActivitiesService {
                 orderBy: { createdAt: 'desc' },
             });
 
+            //En caso de que no existan examenes, se busca el rango inicial segun el arte marcial
             const findFistRankPostulation = await this.prismaService.ranks.findFirst({
                 where: {
                     martialArtId: data.martialArtId,
@@ -454,7 +508,11 @@ export class ActivitiesService {
                 return badResponse;
             }
 
-            const rankId = findLastExam ? findLastExam.ranksId + 1 : (Number(findFistRankPostulation?.id) + 1) || 1;
+            //Si es mayor a 12 años, el rango inicial es 2 (Cinturón Blanco Raya Amarillo), si es menor o igual a 12 años, el rango inicial es 1 (Blanco Punta Amarillo)
+            const rankInitial = ageUser > 12 ? 2 : 1
+
+            //En caso de tener un examen registrado, se asigna al siguiente rango, de lo contrario, se asigna el rango inicial del arte marcial segun la edad del usuario
+            const rankId = findLastExam ? findLastExam.ranksId + 1 : (Number(findFistRankPostulation?.id) + rankInitial) || 1;
 
             const created = await this.prismaService.appliedStudents.create({
                 data: {

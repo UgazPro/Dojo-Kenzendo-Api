@@ -93,6 +93,10 @@ export class ExamDto {
     status!: ExamStatus;
 }
 
+export class AppliedManyStudentsDto {
+    appliedStudents!: AppliedStudentDto[];
+}
+
 export class AppliedStudentDto {
     @IsNumber()
     martialArtId!: number;

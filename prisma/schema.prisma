@@ -201,17 +201,17 @@ model Directive {
 //--------------------//-------Activities-------//--------------------//
 
 model Activities {
-  id          Int      @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   name        String
-  type        String   @default("")
-  description String   @default("")
+  type        TypeActivity @default(Organizacional)
+  description String       @default("")
   date        DateTime
   place       String
-  price       Float    @default(0)
+  price       Float        @default(0)
   latitude    Float
   longitude   Float
-  deleted     Boolean  @default(false)
-  createdDate DateTime @default(now())
+  deleted     Boolean      @default(false)
+  createdDate DateTime     @default(now())
 
   // Relación con la tabla intermedia
   ActivityDojos ActivityDojos[]
@@ -221,6 +221,15 @@ model Activities {
   AppliedStudents    AppliedStudents[]
   Exams              Exams[]
   activitiesImages   ActivitiesImages[]
+}
+
+enum TypeActivity {
+  Examen
+  Organizacional
+  Interna
+  Competencia
+  Seminario
+  Otro
 }
 
 model ActivitiesImages {

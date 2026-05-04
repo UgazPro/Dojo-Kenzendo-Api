@@ -92,15 +92,24 @@ export class ActivitiesController {
     // Applied students (postulaciones)
     @Get('/applied-students')
     getAppliedStudents(
-        @Query('activityId') activityId?: string,
-        @Query('userId') userId?: string,
-        @Query('martialArtId') martialArtId?: string,
+        @Query('activityId', ParseIntPipe) activityId?: number,
+        @Query('userId', ParseIntPipe) userId?: number,
+        @Query('martialArtId', ParseIntPipe) martialArtId?: number,
     ) {
         return this.activitiesService.getAppliedStudents(
-            activityId ? Number(activityId) : undefined,
-            userId ? Number(userId) : undefined,
-            martialArtId ? Number(martialArtId) : undefined,
+            activityId,
+            userId,
+            martialArtId,
         );
+    }
+
+    //Sugerencia de estudiantes para postular a examenes
+    @Get('/applied-students/suggestions')
+    getAppliedStudentSuggestions(
+        @CurrentUser() user,
+        @Query('dojoId', ParseIntPipe) dojoId?: number,
+    ) {
+        return this.activitiesService.getAppliedStudentSuggestion({dojoId, user});
     }
 
     @Post('/applied-students')
