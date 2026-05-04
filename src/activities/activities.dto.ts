@@ -1,4 +1,4 @@
-import { ExamStatus } from '@/generated/prisma/enums';
+import { ExamStatus, TypeActivity } from '@/generated/prisma/enums';
 import { Transform, Type } from 'class-transformer';
 import { IsArray, IsDate, IsEnum, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
 
@@ -33,8 +33,8 @@ export class ActivityDto {
     @IsString()
     name!: string;
 
-    @IsString()
-    type!: string;
+    @IsEnum(TypeActivity)
+    type!: TypeActivity;
 
     @IsString()
     @IsOptional()
@@ -94,7 +94,13 @@ export class ExamDto {
 }
 
 export class AppliedManyStudentsDto {
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => AppliedStudentDto)
     appliedStudents!: AppliedStudentDto[];
+    
+    @IsNumber()
+    activityId!: number;
 }
 
 export class AppliedStudentDto {
@@ -103,9 +109,6 @@ export class AppliedStudentDto {
 
     @IsNumber()
     userId!: number;
-
-    @IsNumber()
-    activityId!: number;
 }
 
 export class ActivityImagesDto {

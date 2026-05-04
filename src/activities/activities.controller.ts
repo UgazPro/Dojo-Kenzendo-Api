@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
-import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
+import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedManyStudentsDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -113,7 +113,7 @@ export class ActivitiesController {
     }
 
     @Post('/applied-students')
-    createAppliedStudent(@Body() data: AppliedStudentDto) {
+    createAppliedStudent(@Body() data: AppliedManyStudentsDto) {
         return this.activitiesService.createAppliedStudent(data);
     }
 

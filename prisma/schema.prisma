@@ -266,6 +266,7 @@ model Exams {
   userId       Int
   ranksId      Int
   activityId   Int
+  date         DateTime    @default(now())
   status       ExamStatus  @default(Aprobado) // Pendiente, Aprobado, Reprobado
   activity     Activities  @relation(fields: [activityId], references: [id])
   martialArt   MartialArts @relation(fields: [martialArtId], references: [id])

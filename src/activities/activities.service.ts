@@ -1,8 +1,9 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
+import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedManyStudentsDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
 import { UserTokenDecode } from '@/users/users.dto';
+import { id } from 'date-fns/locale';
 
 @Injectable()
 export class ActivitiesService {
@@ -415,32 +416,110 @@ export class ActivitiesService {
         }
     }
 
-    async getAppliedStudentSuggestion({dojoId, user}: {dojoId?: number, user: UserTokenDecode}) {
+    async getAppliedStudentSuggestion({ dojoId, user }: { dojoId?: number, user: UserTokenDecode }) {
         try {
 
-            const where: any = {};
+            const where: any = {
+                deleted: false
+            };
 
-            if(user.rol.rol !== 'Administrador') {
+            if (user.rol.rol !== 'Administrador') {
                 where.dojoId = user.dojoId;
             } else if (dojoId) {
                 where.dojoId = dojoId;
             }
 
-            const today = new Date();
-            const minDate: Date = new Date(today.setMonth(today.getMonth() - 8));
-            const studentsSuggestion = await this.prismaService.users.findMany({
+            const now = new Date();
+            const minDate = new Date(now);
+            minDate.setMonth(minDate.getMonth() - 8);
+
+            const students = await this.prismaService.users.findMany({
                 where,
-                include: {
-                    AppliedStudents: true
-                }
-            }).then(users => {
-                return users.map(u => {
-                    return {
-                        ...u,
-                        suggested: u.AppliedStudents.some(a => a.createdAt >= minDate)  || u.enrollmentDate >= minDate ? false : true,
+                select: {
+                    id: true,
+                    name: true,
+                    lastName: true,
+                    enrollmentDate: true,
+                    identification: true,
+                    birthday: true,
+                    dojo: {
+                        select: {
+                            dojoMartialArts: {
+                                select: {
+                                    martialArtId: true,
+                                    martialArt: {
+                                        select: {
+                                            id: true,
+                                            martialArt: true,
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                })
-            })
+                }
+            });
+
+            if (!students.length) {
+                return [];
+            }
+
+            const userIds = students.map(item => item.id);
+            const exams = await this.prismaService.exams.findMany({
+                where: {
+                    userId: { in: userIds },
+                    status: 'Aprobado',
+                },
+                select: {
+                    userId: true,
+                    martialArtId: true,
+                    activity: {
+                        select: {
+                            date: true,
+                        }
+                    },
+                },
+                orderBy: { activity: { date: 'desc' } },
+            });
+
+            const lastExamByUserAndMartialArt = new Map<string, Date>();
+            for (const exam of exams) {
+                const key = `${exam.userId}-${exam.martialArtId}`;
+                if (!lastExamByUserAndMartialArt.has(key)) {
+                    lastExamByUserAndMartialArt.set(key, exam.activity.date);
+                }
+            }
+
+            const studentsSuggestion = students.map(student => {
+                const suggestedByMartialArt = student.dojo.dojoMartialArts.map(item => {
+                    const key = `${student.id}-${item.martialArtId}`;
+                    const lastExamDate = lastExamByUserAndMartialArt.get(key) || null;
+                    const hasEnoughEnrollmentTime = student.enrollmentDate <= minDate;
+                    const hasEnoughTimeFromLastExam = !lastExamDate || lastExamDate <= minDate;
+
+                    return {
+                        martialArtId: item.martialArt.id,
+                        martialArt: item.martialArt.martialArt,
+                        lastExamDate,
+                        suggested: hasEnoughEnrollmentTime && hasEnoughTimeFromLastExam,
+                    };
+                });
+
+                const parseStudent = {
+                    id: student.id,
+                    name: student.name,
+                    lastName: student.lastName,
+                    enrollmentDate: student.enrollmentDate,
+                    identification: student.identification,
+                    birthday: student.birthday,
+                }
+
+                return {
+                    ...parseStudent,
+                    suggestedByMartialArt,
+                    suggested: suggestedByMartialArt.some(item => item.suggested),
+                };
+            });
 
             return studentsSuggestion;
         } catch (error) {
@@ -450,96 +529,134 @@ export class ActivitiesService {
         }
     }
 
-    async createAppliedStudent(data: AppliedStudentDto) {
+    async createAppliedStudent(data: AppliedManyStudentsDto) {
         try {
-            const today = new Date();
-            today.setMonth(today.getMonth() - 8);
-
-            const findUser = await this.prismaService.users.findUnique({ where: { id: data.userId } });
-
-            const ageUser = findUser ? Math.floor((today.getTime() - findUser.birthday.getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : 0;
-
-            const validateEnrollment: boolean = findUser ? findUser.enrollmentDate <= today : false;
-
-            if (validateEnrollment) {
-                badResponse.message = 'El usuario debe tener al menos 8 meses de inscripción en la escuela para ser postulado.';
+            if (!data.appliedStudents?.length) {
+                badResponse.message = 'Debe enviar al menos un estudiante para postular.';
                 return badResponse;
             }
 
-            if (ageUser !== null && ageUser < 5) {
-                badResponse.message = 'El usuario debe tener al menos 5 años para ser postulado.';
-                return badResponse;
-            }
+            const now = new Date();
+            const minDate = new Date(now);
+            minDate.setMonth(minDate.getMonth() - 8);
 
-            //Buscar su ultima postulacion en el arte marcial 
-            const findLastApplication = await this.prismaService.appliedStudents.findFirst({
-                where: {
-                    userId: data.userId,
-                    martialArtId: data.martialArtId,
-                },
-                orderBy: { createdAt: 'desc' },
-            });
+            const preparedApplications: Array<{
+                activityId: number;
+                userId: number;
+                martialArtId: number;
+                rankId: number;
+            }> = [];
 
-            //Buscar su ultimo examen aprobado en el arte marcial
-            const findLastExam = await this.prismaService.exams.findFirst({
-                where: {
-                    userId: data.userId,
-                    martialArtId: data.martialArtId,
-                    status: 'Aprobado',
-                },
-                orderBy: { createdAt: 'desc' },
-            });
+            for (const item of data.appliedStudents) {
+                const findUser = await this.prismaService.users.findUnique({ where: { id: item.userId } });
 
-            //En caso de que no existan examenes, se busca el rango inicial segun el arte marcial
-            const findFistRankPostulation = await this.prismaService.ranks.findFirst({
-                where: {
-                    martialArtId: data.martialArtId,
-                },
-                orderBy: { id: 'asc' },
-            });
+                if (!findUser) {
+                    badResponse.message = `Usuario con id ${item.userId} no encontrado.`;
+                    return badResponse;
+                }
 
-            if (findLastExam && findLastExam.createdAt > today) {
-                badResponse.message = 'Para poder postular a esta actividad, deben haber pasado al menos 8 meses desde el último examen en esta arte marcial.';
-                return badResponse;
-            }
+                const ageUser = Math.floor((now.getTime() - findUser.birthday.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+                const validateEnrollment = findUser.enrollmentDate > minDate;
 
-            if (findLastApplication && findLastApplication.createdAt > today) {
-                badResponse.message = 'Ya existe una postulación reciente para este usuario y arte marcial. Por favor espera antes de postular nuevamente.';
-                return badResponse;
-            }
+                if (validateEnrollment) {
+                    badResponse.message = 'El usuario debe tener al menos 8 meses de inscripción en la escuela para ser postulado.';
+                    return badResponse;
+                }
 
-            //Si es mayor a 12 años, el rango inicial es 2 (Cinturón Blanco Raya Amarillo), si es menor o igual a 12 años, el rango inicial es 1 (Blanco Punta Amarillo)
-            const rankInitial = ageUser > 12 ? 2 : 1
+                if (ageUser < 5) {
+                    badResponse.message = 'El usuario debe tener al menos 5 años para ser postulado.';
+                    return badResponse;
+                }
 
-            //En caso de tener un examen registrado, se asigna al siguiente rango, de lo contrario, se asigna el rango inicial del arte marcial segun la edad del usuario
-            const rankId = findLastExam ? findLastExam.ranksId + 1 : (Number(findFistRankPostulation?.id) + rankInitial) || 1;
+                //Buscar su ultima postulacion en el arte marcial
+                const findLastApplication = await this.prismaService.appliedStudents.findFirst({
+                    where: {
+                        userId: item.userId,
+                        martialArtId: item.martialArtId,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                });
 
-            const created = await this.prismaService.appliedStudents.create({
-                data: {
+                //Buscar su ultimo examen aprobado en el arte marcial
+                const findLastExam = await this.prismaService.exams.findFirst({
+                    where: {
+                        userId: item.userId,
+                        martialArtId: item.martialArtId,
+                        status: 'Aprobado',
+                    },
+                    orderBy: { createdAt: 'desc' },
+                });
+
+                //En caso de que no existan examenes, se busca el rango inicial segun el arte marcial
+                const findFistRankPostulation = await this.prismaService.ranks.findFirst({
+                    where: {
+                        martialArtId: item.martialArtId,
+                    },
+                    orderBy: { id: 'asc' },
+                });
+
+                if (findLastExam && findLastExam.createdAt > minDate) {
+                    badResponse.message = 'Para poder postular a esta actividad, deben haber pasado al menos 8 meses desde el último examen en esta arte marcial.';
+                    return badResponse;
+                }
+
+                if (findLastApplication && findLastApplication.createdAt > minDate) {
+                    badResponse.message = 'Ya existe una postulación reciente para este usuario y arte marcial. Por favor espera antes de postular nuevamente.';
+                    return badResponse;
+                }
+
+                //Si es mayor a 12 años, el rango inicial es 2 (Cinturón Blanco Raya Amarillo), si es menor o igual a 12 años, el rango inicial es 1 (Blanco Punta Amarillo)
+                const rankInitial = ageUser > 12 ? 2 : 1;
+
+                //En caso de tener un examen registrado, se asigna al siguiente rango, de lo contrario, se asigna el rango inicial del arte marcial segun la edad del usuario
+                const rankId = findLastExam ? findLastExam.ranksId + 1 : (Number(findFistRankPostulation?.id) + rankInitial) || 1;
+
+                preparedApplications.push({
                     activityId: data.activityId,
-                    userId: data.userId,
-                    martialArtId: data.martialArtId,
-                    ranksId: rankId,
-                },
-                select: {
-                    id: true,
-                    user: {
+                    userId: item.userId,
+                    martialArtId: item.martialArtId,
+                    rankId,
+                });
+            }
+
+            const createdStudents = await this.prismaService.$transaction(
+                preparedApplications.map(item =>
+                    this.prismaService.appliedStudents.create({
+                        data: {
+                            activityId: item.activityId,
+                            userId: item.userId,
+                            martialArtId: item.martialArtId,
+                            ranksId: item.rankId,
+                        },
                         select: {
                             id: true,
-                            name: true,
-                            lastName: true,
+                            user: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    lastName: true,
+                                }
+                            },
+                            ranks: {
+                                include: {
+                                    martialArt: true,
+                                }
+                            },
                         }
-                    },
-                    ranks: {
-                        include: {
-                            martialArt: true,
-                        }
-                    },
-                }
-            });
+                    })
+                )
+            );
 
-            baseResponse.data = created;
-            baseResponse.message = `Estudiante ${created.user.name} ${created.user.lastName} postulado correctamente para el examen de ${created.ranks.martialArt.martialArt} a Cinturón ${created.ranks.belt} ${created.ranks.code}${created.ranks.rank_name ? ` (${created.ranks.rank_name})` : ''}`;
+            if (createdStudents.length === 1) {
+                const created = createdStudents[0];
+                baseResponse.data = created;
+                baseResponse.message = `Estudiante ${created.user.name} ${created.user.lastName} postulado correctamente para el examen de ${created.ranks.martialArt.martialArt} a Cinturón ${created.ranks.belt} ${created.ranks.code}${created.ranks.rank_name ? ` (${created.ranks.rank_name})` : ''}`;
+                return baseResponse;
+            }
+
+            const martialArts = [...new Set(createdStudents.map(item => item.ranks.martialArt.martialArt))];
+            baseResponse.data = createdStudents;
+            baseResponse.message = `Estudiantes aplicados correctamente para examenes de ${martialArts.join(' y ')}`;
             return baseResponse;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
