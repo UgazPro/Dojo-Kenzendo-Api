@@ -1,12 +1,22 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { ValidationError } from 'class-validator';
 import { AllExceptionsFilter } from './filters/exception.filter';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from './guards/auth/auth.guard';
 import { RolesGuard } from './guards/roles/roles.guard';
 import { join } from 'path';
 import * as express from 'express';
+
+function collectValidationMessages(errors: ValidationError[]): string[] {
+  return errors.flatMap((error) => {
+    const constraints = Object.values(error.constraints ?? {});
+    const childConstraints = collectValidationMessages(error.children ?? []);
+
+    return [...constraints, ...childConstraints];
+  });
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,12 +27,7 @@ async function bootstrap() {
     forbidNonWhitelisted: true,
     transform: true,
     exceptionFactory: (errors) => {
-      const message = errors
-        .map(
-          (error) =>
-            `${Object.values(error.constraints ?? {}).join(', ')}`
-        )
-        .join('; ');
+      const message = collectValidationMessages(errors).join('; ');
 
       return new BadRequestException(`Errores de validación: ${message}`);
     },

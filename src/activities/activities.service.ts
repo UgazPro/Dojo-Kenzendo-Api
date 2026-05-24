@@ -331,6 +331,11 @@ export class ActivitiesService {
                             martialArt: true,
                         }
                     },
+                    previousRank: {
+                        include: {
+                            martialArt: true,
+                        }
+                    },
                 },
                 orderBy: { createdAt: 'desc' },
             });
@@ -344,33 +349,81 @@ export class ActivitiesService {
 
     async saveExam(exam: ExamStudentsDto) {
         try {
+            const examPairs = exam.exams.map(item => ({
+                userId: item.userId,
+                martialArtId: item.martialArtId,
+            }));
+            const examStatusByPair = new Map(
+                exam.exams.map(item => [
+                    `${item.userId}-${item.martialArtId}`,
+                    item.status,
+                ]),
+            );
+
             const getUsersApplied = await this.prismaService.appliedStudents.findMany({
                 where: {
-                    userId: { in: exam.exams.map(e => e.userId) },
-                    martialArtId: { in: exam.exams.map(e => e.martialArtId) },
+                    OR: examPairs,
                 },
                 orderBy: { createdAt: 'desc' },
             });
-
-            await this.prismaService.exams.createMany({
-                data: getUsersApplied.map(item => ({
-                    martialArtId: item.martialArtId,
-                    userId: item.userId,
-                    ranksId: item.ranksId,
-                    activityId: item.activityId,
-                    status: exam.exams.find(e => e.userId === item.userId && e.martialArtId === item.martialArtId)?.status || 'Pendiente',
-                }))
-            });
-
-            await this.prismaService.appliedStudents.deleteMany({
+            const currentUserRanks = await this.prismaService.userRanks.findMany({
                 where: {
-                    userId: { in: exam.exams.map(e => e.userId) },
-                    martialArtId: { in: exam.exams.map(e => e.martialArtId) },
+                    OR: examPairs,
+                },
+                select: {
+                    userId: true,
+                    martialArtId: true,
+                    currentRankId: true,
                 }
             });
+            const currentRankByPair = new Map(
+                currentUserRanks.map(item => [
+                    `${item.userId}-${item.martialArtId}`,
+                    item.currentRankId,
+                ]),
+            );
+            const missingPreviousRank = getUsersApplied.find(
+                item => !currentRankByPair.has(`${item.userId}-${item.martialArtId}`),
+            );
+
+            if (missingPreviousRank) {
+                badResponse.message = 'No se encontro el rango actual del usuario para registrar el examen.';
+                return badResponse;
+            }
+
+            await this.prismaService.$transaction([
+                this.prismaService.exams.createMany({
+                    data: getUsersApplied.map(item => ({
+                        martialArtId: item.martialArtId,
+                        userId: item.userId,
+                        previousRankId: currentRankByPair.get(`${item.userId}-${item.martialArtId}`)!,
+                        ranksId: item.ranksId,
+                        activityId: item.activityId,
+                        status: examStatusByPair.get(`${item.userId}-${item.martialArtId}`) || 'Pendiente',
+                    }))
+                }),
+                ...getUsersApplied
+                    .filter(item => examStatusByPair.get(`${item.userId}-${item.martialArtId}`) === 'Aprobado')
+                    .map(item => this.prismaService.userRanks.update({
+                        where: {
+                            userId_martialArtId: {
+                                userId: item.userId,
+                                martialArtId: item.martialArtId,
+                            }
+                        },
+                        data: {
+                            currentRankId: item.ranksId,
+                        }
+                    })),
+                this.prismaService.appliedStudents.deleteMany({
+                    where: {
+                        OR: examPairs,
+                    }
+                }),
+            ]);
 
             baseResponse.data = null;
-            baseResponse.message = 'Examen creado correctamente';
+            baseResponse.message = 'Resultado de Examen guardado correctamente';
             return baseResponse;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -385,6 +438,12 @@ export class ActivitiesService {
         if (activityId) where.activityId = activityId;
         if (userId) where.userId = userId;
         if (martialArtId) where.martialArtId = martialArtId;
+
+        const getCurrentRanksUsers = await this.prismaService.userRanks.findMany({
+            include: {
+                rank: true
+            }
+        });
 
         try {
             const applied = await this.prismaService.appliedStudents.findMany({
@@ -407,7 +466,10 @@ export class ActivitiesService {
                     },
                     ranks: true,
                 }
-            });
+            }).then(results => results.map(item => ({
+                ...item,
+                currentRank: getCurrentRanksUsers.find(r => r.userId === item.userId && r.martialArtId === item.martialArtId)?.rank || null
+            })));
             return applied;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -465,14 +527,19 @@ export class ActivitiesService {
             }
 
             const userIds = students.map(item => item.id);
+            const martialArtIds = [...new Set(
+                students.flatMap(item => item.dojo.dojoMartialArts.map(dojoMartialArt => dojoMartialArt.martialArtId)),
+            )];
             const exams = await this.prismaService.exams.findMany({
                 where: {
                     userId: { in: userIds },
+                    martialArtId: { in: martialArtIds },
                     status: 'Aprobado',
                 },
                 select: {
                     userId: true,
                     martialArtId: true,
+                    ranksId: true,
                     activity: {
                         select: {
                             date: true,
@@ -481,26 +548,59 @@ export class ActivitiesService {
                 },
                 orderBy: { activity: { date: 'desc' } },
             });
+            const ranks = await this.prismaService.ranks.findMany({
+                where: {
+                    martialArtId: { in: martialArtIds },
+                },
+                select: {
+                    id: true,
+                    martialArtId: true,
+                    code: true,
+                    rank_name: true,
+                    belt: true,
+                    icon: true,
+                },
+                orderBy: { id: 'asc' },
+            });
 
-            const lastExamByUserAndMartialArt = new Map<string, Date>();
+            const lastExamByUserAndMartialArt = new Map<string, { date: Date; ranksId: number }>();
             for (const exam of exams) {
                 const key = `${exam.userId}-${exam.martialArtId}`;
                 if (!lastExamByUserAndMartialArt.has(key)) {
-                    lastExamByUserAndMartialArt.set(key, exam.activity.date);
+                    lastExamByUserAndMartialArt.set(key, {
+                        date: exam.activity.date,
+                        ranksId: exam.ranksId,
+                    });
                 }
             }
+            const firstRankByMartialArt = new Map<number, typeof ranks[number]>();
+            for (const rank of ranks) {
+                if (!firstRankByMartialArt.has(rank.martialArtId)) {
+                    firstRankByMartialArt.set(rank.martialArtId, rank);
+                }
+            }
+            const rankById = new Map(ranks.map(rank => [rank.id, rank]));
 
             const studentsSuggestion = students.map(student => {
+                const ageUser = Math.floor((now.getTime() - student.birthday.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
                 const suggestedByMartialArt = student.dojo.dojoMartialArts.map(item => {
                     const key = `${student.id}-${item.martialArtId}`;
-                    const lastExamDate = lastExamByUserAndMartialArt.get(key) || null;
+                    const lastApprovedExam = lastExamByUserAndMartialArt.get(key) || null;
+                    const lastExamDate = lastApprovedExam?.date || null;
                     const hasEnoughEnrollmentTime = student.enrollmentDate <= minDate;
                     const hasEnoughTimeFromLastExam = !lastExamDate || lastExamDate <= minDate;
+                    const rankInitial = ageUser > 12 ? 2 : 1;
+                    const firstRank = firstRankByMartialArt.get(item.martialArtId);
+                    const postulationRankId = lastApprovedExam
+                        ? lastApprovedExam.ranksId + 1
+                        : (Number(firstRank?.id) + rankInitial) || 1;
+                    const postulationRank = rankById.get(postulationRankId) || null;
 
                     return {
                         martialArtId: item.martialArt.id,
                         martialArt: item.martialArt.martialArt,
                         lastExamDate,
+                        postulationRank,
                         suggested: hasEnoughEnrollmentTime && hasEnoughTimeFromLastExam,
                     };
                 });

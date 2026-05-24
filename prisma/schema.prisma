@@ -124,7 +124,8 @@ model Ranks {
   icon            String
   martialArtId    Int
   AppliedStudents AppliedStudents[]
-  Exams           Exams[]
+  Exams           Exams[]           @relation("ExamRank")
+  previousExams   Exams[]           @relation("ExamPreviousRank")
   martialArt      MartialArts       @relation(fields: [martialArtId], references: [id])
   userRanks       UserRanks[]
 }
@@ -261,18 +262,20 @@ model ActivityAttendance {
 }
 
 model Exams {
-  id           Int         @id @default(autoincrement())
-  martialArtId Int
-  userId       Int
-  ranksId      Int
-  activityId   Int
-  date         DateTime    @default(now())
-  status       ExamStatus  @default(Aprobado) // Pendiente, Aprobado, Reprobado
-  activity     Activities  @relation(fields: [activityId], references: [id])
-  martialArt   MartialArts @relation(fields: [martialArtId], references: [id])
-  ranks        Ranks       @relation(fields: [ranksId], references: [id])
-  user         Users       @relation(fields: [userId], references: [id])
-  createdAt    DateTime    @default(now())
+  id              Int         @id @default(autoincrement())
+  martialArtId    Int
+  userId          Int
+  previousRankId  Int
+  ranksId         Int
+  activityId      Int
+  date            DateTime    @default(now())
+  status          ExamStatus  @default(Aprobado) // Pendiente, Aprobado, Reprobado
+  activity        Activities  @relation(fields: [activityId], references: [id])
+  martialArt      MartialArts @relation(fields: [martialArtId], references: [id])
+  ranks           Ranks       @relation("ExamRank", fields: [ranksId], references: [id])
+  previousRank    Ranks       @relation("ExamPreviousRank", fields: [previousRankId], references: [id])
+  user            Users       @relation(fields: [userId], references: [id])
+  createdAt       DateTime    @default(now())
 }
 
 enum ExamStatus {

@@ -12,6 +12,32 @@ export class UsersService {
         private prismaService: PrismaService
     ) { }
 
+    private buildUserResponseInclude() {
+        return {
+            rol: true,
+            dojo: {
+                select: {
+                    dojo: true,
+                    id: true,
+                }
+            },
+            userRanks: {
+                select: {
+                    martialArt: true,
+                    rank: {
+                        select: {
+                            id: true,
+                            rank_name: true,
+                            belt: true,
+                            icon: true,
+                            code: true,
+                        }
+                    }
+                }
+            }
+        };
+    }
+
     async getUsers(
         user: UserTokenDecode,
         dojoId?: string,
@@ -38,29 +64,7 @@ export class UsersService {
 
         try {
             const users = await this.prismaService.users.findMany({
-                include: {
-                    rol: true,
-                    dojo: {
-                        select: {
-                            dojo: true,
-                            id: true,
-                        }
-                    },
-                    userRanks: {
-                        select: {
-                            martialArt: true,
-                            rank: {
-                                select: {
-                                    id: true,
-                                    rank_name: true,
-                                    belt: true,
-                                    icon: true,
-                                    code: true,
-                                }
-                            }
-                        }
-                    }
-                },
+                include: this.buildUserResponseInclude(),
                 where: {
                     id: { not: user.id },
                     ...where,
@@ -360,7 +364,8 @@ export class UsersService {
                     active: true,
                     deleted: false,
                     enrollmentDate: user.enrollmentDate,
-                }
+                },
+                include: this.buildUserResponseInclude(),
             });
 
             await this.prismaService.userRanks.createMany({
@@ -371,6 +376,7 @@ export class UsersService {
                 }))
             })
 
+            baseResponse.data = userCreated;
             baseResponse.message = 'Usuario creado correctamente';
             return baseResponse;
 
@@ -403,7 +409,7 @@ export class UsersService {
 
     async updateUser(user: UsersDTO, id: number, profileImg: string) {
         try {
-            await this.prismaService.users.update({
+            const userUpdated = await this.prismaService.users.update({
                 data: {
                     identification: user.identification,
                     name: user.name,
@@ -419,6 +425,8 @@ export class UsersService {
                 where: {
                     id: id,
                 }
+                ,
+                include: this.buildUserResponseInclude(),
             });
 
             await this.prismaService.userRanks.updateMany({
@@ -428,6 +436,7 @@ export class UsersService {
                 }
             })
 
+            baseResponse.data = userUpdated;
             baseResponse.message = 'Usuario actualizado correctamente';
             return baseResponse;
 

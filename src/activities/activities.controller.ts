@@ -92,9 +92,9 @@ export class ActivitiesController {
     // Applied students (postulaciones)
     @Get('/applied-students')
     getAppliedStudents(
-        @Query('activityId', ParseIntPipe) activityId?: number,
-        @Query('userId', ParseIntPipe) userId?: number,
-        @Query('martialArtId', ParseIntPipe) martialArtId?: number,
+        @Query('activityId', new ParseIntPipe({ optional: true })) activityId?: number,
+        @Query('userId', new ParseIntPipe({ optional: true })) userId?: number,
+        @Query('martialArtId', new ParseIntPipe({ optional: true })) martialArtId?: number,
     ) {
         return this.activitiesService.getAppliedStudents(
             activityId,

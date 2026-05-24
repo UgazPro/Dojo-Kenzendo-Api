@@ -1,5 +1,6 @@
-import { Transform, Type } from "class-transformer";
+import { plainToInstance, Transform, Type } from "class-transformer";
 import { IsArray, IsDate, IsNumber, IsString, ValidateNested } from "class-validator";
+
 
 export class UsersDTO {
     @IsString()
@@ -32,10 +33,14 @@ export class UsersDTO {
     enrollmentDate!: Date;
 
     @Transform(({ value }) => {
+        if (typeof value !== 'string') {
+            return value;
+        }
+
         return JSON.parse(value);
     })
     @IsArray({ message: 'Debe ser un arreglo' })
-    // @ValidateNested({ each: true })
+    @ValidateNested({ each: true })
     @Type(() => MartialArtRank)
     martialArtRank!: MartialArtRank[];
 }
@@ -57,6 +62,18 @@ export class UserPassword {
 }
 
 
+export class UsersPayloadDto {
+    @Transform(({ value }) => {
+        const parsedValue = typeof value === 'string'
+            ? JSON.parse(value)
+            : value;
+
+        return plainToInstance(UsersDTO, parsedValue);
+    })
+    @ValidateNested()
+    @Type(() => UsersDTO)
+    userData!: UsersDTO;
+}
 
 
 export interface UserTokenDecode {

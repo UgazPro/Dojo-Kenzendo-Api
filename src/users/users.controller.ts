@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Req, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UsersService } from './users.service';
-import { UserPassword, UsersDTO } from './users.dto';
+import { UserPassword, UsersDTO, UsersPayloadDto } from './users.dto';
 import { Roles } from '@/guards/roles/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -75,13 +75,13 @@ export class UsersController {
     }))
     async createUser(
         @Req() req: any, 
-        @Body() newUser: UsersDTO, 
+        @Body() payload: UsersPayloadDto, 
         @CurrentUser() user,
         @UploadedFile() file?: Express.Multer.File, 
         ) {
         const profileImg = file ? `/uploads/users/${file.filename}` : (req.existingFile || '');
 
-        return await this.userService.createUser(newUser, profileImg, user);
+        return await this.userService.createUser(payload.userData, profileImg, user);
     }
 
     @Put('/:id')
@@ -115,11 +115,11 @@ export class UsersController {
     }))
     async updateUser(
         @Req() req: any,
-        @Param('id', ParseIntPipe) 
-        id: number, @Body() user: UsersDTO, 
+        @Param('id', ParseIntPipe) id: number, 
+        @Body() user: UsersPayloadDto, 
         @UploadedFile() file?: Express.Multer.File) {
         const profileImg = file ? `/uploads/users/${file.filename}` : (req.existingFile || '');
-        return await this.userService.updateUser(user, id, profileImg);
+        return await this.userService.updateUser(user.userData, id, profileImg);
     }
 
     @Put('/change-password')

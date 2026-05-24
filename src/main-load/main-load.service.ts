@@ -212,14 +212,14 @@ export class MainLoadService {
         });
 
         // Exámenes asociados a actividades (historial)
-        await this.prismaService.exams.createMany({
-            data: [
-                { martialArtId: 1, userId: 2, ranksId: 8, activityId: activityExamDay.id },
-                { martialArtId: 1, userId: 3, ranksId: 6, activityId: activityExamDay.id },
-                { martialArtId: 2, userId: 1, ranksId: 20, activityId: activityExamDay.id },
-            ],
-            skipDuplicates: true,
-        });
+        // await this.prismaService.exams.createMany({
+        //     data: [
+        //         { martialArtId: 1, userId: 2, ranksId: 8, activityId: activityExamDay.id },
+        //         { martialArtId: 1, userId: 3, ranksId: 6, activityId: activityExamDay.id },
+        //         { martialArtId: 2, userId: 1, ranksId: 20, activityId: activityExamDay.id },
+        //     ],
+        //     skipDuplicates: true,
+        // });
 
         // Postulaciones a exámenes
         await this.prismaService.appliedStudents.createMany({
