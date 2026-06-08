@@ -102,7 +102,7 @@ export class PaymentsService {
                     email: data.email ? data.email : '',
                     account: data.account ? data.account : '',
                     phone: data.phone ? data.phone : '',
-                    identification: data.identification,
+                    identification: data.identification || '',
                 },
             });
             baseResponse.data = created;

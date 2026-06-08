@@ -11,18 +11,20 @@ export class PaymentMethodDto {
     bank!: string;
 
     @IsString()
-    account!: string;
+    @IsOptional()
+    account?: string;
 
     @IsString()
-    phone!: string;
+    @IsOptional()
+    phone?: string;
 
-    @IsEmail()
+    @IsOptional()
+    @IsString()
     email?: string;
-
+    
+    @IsOptional()
     @IsString()
-    @IsNotEmpty()
-    @MaxLength(50)
-    identification!: string;
+    identification?: string;
 }
 
 export class PaymentDto {

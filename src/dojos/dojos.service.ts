@@ -1,6 +1,6 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
+import { AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO, ScheduleDTO } from './dojo.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
 import { UserTokenDecode } from '@/users/users.dto';
 import { Prisma } from '@/generated/prisma/client';
@@ -52,6 +52,39 @@ export class DojosService {
                 })]
                 : []),
         ]);
+    }
+
+    private isInvalidScheduleRange(startTime: string, endTime: string) {
+        return startTime >= endTime;
+    }
+
+    private hasScheduleOverlap(startA: string, endA: string, startB: string, endB: string) {
+        return startA < endB && endA > startB;
+    }
+
+    private async findScheduleOverlap(item: ScheduleDTO, excludeIds: number[] = []) {
+        return await this.prismaService.schedules.findFirst({
+            where: {
+                dojoId: item.dojoId,
+                day: item.day,
+                martialArtId: item.martialArtId,
+                ...(excludeIds.length > 0
+                    ? { id: { notIn: excludeIds } }
+                    : {}),
+                startTime: { lt: item.endTime },
+                endTime: { gt: item.startTime },
+            },
+            select: {
+                id: true,
+                name: true,
+                startTime: true,
+                endTime: true,
+            }
+        });
+    }
+
+    private getScheduleOccupiedMessage(action: 'crear' | 'actualizar', item: ScheduleDTO) {
+        return `No se puede ${action} el horario (${item.day} ${item.startTime} - ${item.endTime}) porque ese horario ya esta ocupado para este dojo y arte marcial`;
     }
 
     async getDojos(dojoId?: string) {
@@ -405,7 +438,35 @@ export class DojosService {
 
     async createScheduleDojo(schedule: ScheduleDojoDTO) {
         try {
-            const newSchedule = await this.prismaService.schedules.createMany({
+            for (let index = 0; index < schedule.schedule.length; index++) {
+                const item = schedule.schedule[index];
+
+                if (this.isInvalidScheduleRange(item.startTime, item.endTime)) {
+                    badResponse.message = `No se puede crear el horario (${item.day} ${item.startTime} - ${item.endTime}) porque el rango de horas es invalido`;
+                    return badResponse;
+                }
+
+                const overlapInRequest = schedule.schedule.find((candidate, candidateIndex) =>
+                    candidateIndex < index
+                    && candidate.dojoId === item.dojoId
+                    && candidate.day === item.day
+                    && candidate.martialArtId === item.martialArtId
+                    && this.hasScheduleOverlap(item.startTime, item.endTime, candidate.startTime, candidate.endTime)
+                );
+
+                if (overlapInRequest) {
+                    badResponse.message = this.getScheduleOccupiedMessage('crear', item);
+                    return badResponse;
+                }
+
+                const scheduleOverlap = await this.findScheduleOverlap(item);
+                if (scheduleOverlap) {
+                    badResponse.message = this.getScheduleOccupiedMessage('crear', item);
+                    return badResponse;
+                }
+            }
+
+            await this.prismaService.schedules.createMany({
                 data: schedule.schedule.map(item => ({
                     dojoId: item.dojoId,
                     day: item.day,
@@ -445,6 +506,45 @@ export class DojosService {
 
     async updateScheduleDojo(schedule: ScheduleDojoDTO) {
         try {
+            for (let index = 0; index < schedule.schedule.length; index++) {
+                const item = schedule.schedule[index];
+
+                if (this.isInvalidScheduleRange(item.startTime, item.endTime)) {
+                    badResponse.message = `No se puede actualizar el horario (${item.day} ${item.startTime} - ${item.endTime}) porque el rango de horas es invalido`;
+                    return badResponse;
+                }
+
+                const overlapInRequest = schedule.schedule.find((candidate, candidateIndex) =>
+                    candidateIndex < index
+                    && candidate.dojoId === item.dojoId
+                    && candidate.day === item.day
+                    && candidate.martialArtId === item.martialArtId
+                    && this.hasScheduleOverlap(item.startTime, item.endTime, candidate.startTime, candidate.endTime)
+                );
+
+                if (overlapInRequest) {
+                    badResponse.message = this.getScheduleOccupiedMessage('actualizar', item);
+                    return badResponse;
+                }
+
+                const schedulesToUpdate = await this.prismaService.schedules.findMany({
+                    where: {
+                        dojoId: item.dojoId,
+                        day: item.day,
+                        martialArtId: item.martialArtId,
+                    },
+                    select: {
+                        id: true,
+                    }
+                });
+
+                const scheduleOverlap = await this.findScheduleOverlap(item, schedulesToUpdate.map(row => row.id));
+                if (scheduleOverlap) {
+                    badResponse.message = this.getScheduleOccupiedMessage('actualizar', item);
+                    return badResponse;
+                }
+            }
+
             const updatedSchedules: any[] = [];
             for (const item of schedule.schedule) {
                 const updatedSchedule = await this.prismaService.schedules.updateMany({
