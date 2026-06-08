@@ -1,6 +1,6 @@
 import { ExamStatus, TypeActivity } from '@/generated/prisma/enums';
 import { Transform, Type } from 'class-transformer';
-import { IsArray, IsDate, IsEnum, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsBoolean, IsDate, IsEnum, IsNumber, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
 
 export class ActivityFilterDto {
     @IsOptional()
@@ -27,6 +27,10 @@ export class ActivityFilterDto {
     @IsOptional()
     @IsString()
     name?: string;
+
+    @IsOptional()
+    @IsBoolean()
+    deleted?: boolean;
 }
 
 export class ActivityDto {

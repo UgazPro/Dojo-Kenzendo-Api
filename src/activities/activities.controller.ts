@@ -21,6 +21,7 @@ export class ActivitiesController {
         @Query('place') place?: string,
         @Query('name') name?: string,
         @Query('includePast') includePast?: string,
+        @Query('deleted') deleted?: string,
     ) {
         const filters: ActivityFilterDto = {};
         if (dojoId) filters.dojoId = Number(dojoId);
@@ -29,6 +30,7 @@ export class ActivitiesController {
         if (place) filters.place = place;
         if (name) filters.name = name;
         if (includePast !== undefined) filters.includePast = includePast === 'true';
+        if (deleted !== undefined) filters.deleted = deleted === 'true';
         return this.activitiesService.getActivities(filters);
     }
 

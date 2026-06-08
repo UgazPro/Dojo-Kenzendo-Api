@@ -196,18 +196,26 @@ export class DojosService {
                             rol: true,
                         }
                     }
-                },
-                orderBy: {
-                    id: 'asc'
                 }
             })
         ]);
+
+        const masters = [...usersByRole].sort((a, b) => {
+            const maxRankA = Math.max(0, ...a.userRanks.map(userRank => userRank.rank?.id ?? 0));
+            const maxRankB = Math.max(0, ...b.userRanks.map(userRank => userRank.rank?.id ?? 0));
+
+            if (maxRankA !== maxRankB) {
+                return maxRankB - maxRankA;
+            }
+
+            return `${a.lastName} ${a.name}`.localeCompare(`${b.lastName} ${b.name}`);
+        });
 
         return {
             ...dojoInfo,
             dojoMartialArts: dojoInfo.dojoMartialArts.map(dma => dma.martialArt),
             totalStudents,
-            masters: usersByRole,
+            masters,
         };
     }
 
@@ -358,7 +366,7 @@ export class DojosService {
         }
         catch (error) {
             console.log(error);
-            
+
             badResponse.data = error;
             badResponse.message = 'Error al actualizar el dojo';
             return badResponse;

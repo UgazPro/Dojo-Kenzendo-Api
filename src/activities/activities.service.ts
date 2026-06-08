@@ -12,7 +12,9 @@ export class ActivitiesService {
     }
 
     async getActivities(filters: ActivityFilterDto) {
-        const where: any = {};
+        const where: any = {
+            deleted: filters.deleted ?? false,
+        };
 
         // Por defecto solo próximas (hoy en adelante) si no se pide historial
         const today = new Date();
