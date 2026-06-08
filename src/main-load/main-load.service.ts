@@ -12,12 +12,25 @@ export class MainLoadService {
 
     async loadInitialData(): Promise<DtoBaseResponse> {
         try {
+            const dojoAlreadyExists = await this.prismaService.dojos.findUnique({
+                where: { code: 'KZD' },
+            });
+
+            if (dojoAlreadyExists) {
+                return {
+                    success: true,
+                    message: 'Los datos iniciales ya fueron cargados previamente',
+                    data: null,
+                };
+            }
+
             await this.prismaService.martialArts.createMany({
                 data: [
                     { martialArt: 'Karate', icon: 'karate-icono.png' },
                     { martialArt: 'Kobudo', icon: 'kobudo-icono.png' },
                     { martialArt: 'Kendo Iaido', icon: 'kendo-iaido-icono.png' },
                 ],
+                skipDuplicates: true,
             });
 
             await this.prismaService.roles.createMany({
@@ -28,6 +41,7 @@ export class MainLoadService {
                     { rol: 'Estudiante', },
                     { rol: 'Representante', },
                 ],
+                skipDuplicates: true,
             });
 
             await this.prismaService.ranks.createMany({
@@ -72,6 +86,7 @@ export class MainLoadService {
                     { code: '6 Dan', rank_name: 'Renshi', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
                     { code: '7 Dan', rank_name: 'Kyoshi', belt: 'Negro', icon: 'black-belt.png', martialArtId: 2 },
                 ],
+                skipDuplicates: true,
             });
 
             await this.prismaService.dojos.createMany({
@@ -80,6 +95,7 @@ export class MainLoadService {
                     { dojo: 'Dojo Okikonbukan', address: '', latitude: 10.6447, longitude: -71.6104, code: 'OKB' },
                     { dojo: 'Dojo Okinawakan', address: '', latitude: 10.6447, longitude: -71.6104, code: 'OKK' },
                 ],
+                skipDuplicates: true,
             });
 
             await this.prismaService.dojoMartialArts.createMany({
@@ -92,7 +108,8 @@ export class MainLoadService {
                     { dojoId: 3, martialArtId: 1 },
                     { dojoId: 3, martialArtId: 2 },
                     { dojoId: 3, martialArtId: 3 },
-                ]
+                ],
+                skipDuplicates: true,
             })
 
             await this.prismaService.users.createMany({
@@ -148,7 +165,8 @@ export class MainLoadService {
                         deleted: false,
                         enrollmentDate: new Date('2020-01-01')
                     }
-                ]
+                ],
+                skipDuplicates: true,
             });
 
             await this.prismaService.userRanks.createMany({
@@ -157,7 +175,8 @@ export class MainLoadService {
                     { userId: 1, martialArtId: 2, currentRankId: 13 },
                     { userId: 2, martialArtId: 1, currentRankId: 8 },
                     { userId: 2, martialArtId: 2, currentRankId: 5 },
-                ]
+                ],
+                skipDuplicates: true,
             });
 
             return {
