@@ -94,13 +94,45 @@ export class DojosService {
             where.id = Number(dojoId);
         }
 
-        return await this.prismaService.dojos.findMany({
+        const users = await this.prismaService.users.findMany({
+            select: {
+                id: true,
+                name: true,
+                lastName: true,
+                profileImg: true,
+                dojoId: true,
+                rol: {
+                    select: {
+                        rol: true
+                    }
+                },
+                userRanks: {
+                    select: {
+                        rank: true,
+                        martialArt: {
+                            select: {
+                                martialArt: true,
+                                icon: true,
+                            }
+                        }
+                    }
+                },
+            },
+            where: {
+                rol: {
+                    rol: 'Líder Instructor'
+                }
+            }
+        })
+
+        const dojos = await this.prismaService.dojos.findMany({
             where,
             orderBy: { id: 'asc' },
             select: {
                 id: true,
                 dojo: true,
                 address: true,
+                addressShort: true,
                 logo: true,
                 code: true,
 
@@ -108,12 +140,21 @@ export class DojosService {
                     include: { martialArt: true }
                 }
             }
-        }).then(dojos => {
-            return dojos.map(dojo => ({
+        });
+
+        return Promise.all(dojos.map(async dojo => ({
                 ...dojo,
-                dojoMartialArts: dojo.dojoMartialArts.map(dma => dma.martialArt)
-            }))
-        })
+                dojoMartialArts: dojo.dojoMartialArts.map(dma => dma.martialArt),
+                leaderInstructor: users.find(user => user.dojoId === dojo.id),
+                students: await this.prismaService.users.count({
+                    where: {
+                        dojoId: dojo.id,
+                        rol: { rol: 'Estudiante' },
+                        active: true,
+                        deleted: false,
+                    }
+                })
+            })));
     }
 
 
