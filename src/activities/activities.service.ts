@@ -24,10 +24,7 @@ export class ActivitiesService {
         }
 
         if (filters?.dojoId) {
-            where.OR = [
-                { dojosId: filters.dojoId },
-                { ActivityDojos: { some: { dojoId: filters.dojoId } } },
-            ];
+            where.ActivityDojos = { some: { dojoId: filters.dojoId } };
         }
 
         if (filters?.startDate && filters?.endDate) {
@@ -47,6 +44,7 @@ export class ActivitiesService {
         }
 
         try {
+            const getPostulated = await this.prismaService.appliedStudents.findMany();
             const activities = await this.prismaService.activities.findMany({
                 where,
                 include: {
@@ -61,8 +59,12 @@ export class ActivitiesService {
                             }
                         }
                     },
-                }
-            });
+                },
+                orderBy: { date: 'asc' },
+            }).then(results => results.map(activity => ({
+                ...activity,
+                postulated: getPostulated.filter(p => p.activityId === activity.id).length,
+            })));
             return activities;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -86,10 +88,7 @@ export class ActivitiesService {
         };
 
         if (dojoId) {
-            where.OR = [
-                { dojosId: dojoId },
-                { ActivityDojos: { some: { dojoId } } },
-            ];
+            where.ActivityDojos = { some: { dojoId } };
         }
 
         try {
