@@ -360,7 +360,7 @@ export class UsersService {
     async createUser(user: UsersDTO, profileImg: string, currentUser: UserTokenDecode) {
         try {
             const dojoId = currentUser.rol.rol === 'Administrador' ? user.dojoId : currentUser.dojoId;
-            const hashed = await bcrypt.hash(user.identification, 10);
+            const hashed = await bcrypt.hash(user.identification, 12);
             const userCreated = await this.prismaService.users.create({
                 data: {
                     identification: user.identification,
@@ -420,7 +420,7 @@ export class UsersService {
             }
 
 
-            const hashed = await bcrypt.hash(password, 10);
+            const hashed = await bcrypt.hash(password, 12);
             await this.prismaService.users.update({
                 data: {
                     password: hashed,

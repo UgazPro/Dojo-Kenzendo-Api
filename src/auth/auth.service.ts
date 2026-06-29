@@ -141,13 +141,13 @@ export class AuthService {
       });
 
       if (!findUser) {
-        badResponse.message = 'Usuario o contraseña incorrectos';
+        badResponse.message = 'Usuario no encontrado';
         return badResponse;
       }
 
       const isValid = await bcrypt.compare(credentials.password, findUser.password);
       if (!isValid) {
-        badResponse.message = 'Usuario o contraseña incorrectos';
+        badResponse.message = 'Contraseña incorrecta';
         return badResponse;
       }
 
