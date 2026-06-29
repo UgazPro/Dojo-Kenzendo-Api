@@ -104,6 +104,7 @@ export class UsersService {
                     sex: true,
                     rol: {
                         select: {
+                            id: true,
                             rol: true
                         }
                     },
