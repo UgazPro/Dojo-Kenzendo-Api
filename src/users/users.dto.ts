@@ -55,8 +55,8 @@ export class MartialArtRank {
 }
 
 export class UserPassword {
-    @IsNumber()
-    id!: number;
+    @IsString()
+    oldPassword!: string;
     @IsString()
     password!: string;
 }

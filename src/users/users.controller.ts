@@ -23,9 +23,49 @@ export class UsersController {
         return await this.userService.getUsers(user, dojoId, userId, deleted === 'true');
     }
 
+    //Profile
     @Get('/info')
-    async getInfoUser(@CurrentUser() user) {
-        return await this.userService.getInfoUser(user);
+    async getProfileInfo(@CurrentUser() user) {
+        return await this.userService.getProfileInfo(user);
+    }
+
+    @Put('/info')
+    @UseInterceptors(FileInterceptor('profileImg', {
+        storage: diskStorage({
+            destination: (req, file, cb) => {
+                const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'users');
+                if (!fs.existsSync(uploadPath)) {
+                    fs.mkdirSync(uploadPath, { recursive: true });
+                }
+                cb(null, uploadPath);
+            },
+            filename: (req, file, cb) => {
+                const original = file.originalname;
+                const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                cb(null, safeName);
+            }
+        }),
+        limits: { files: 1 },
+        fileFilter: (req, file, cb) => {
+            const uploadPath = join(__dirname, '..', '..', '..', 'uploads', 'users');
+            const original = file.originalname;
+            const safeName = original.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+            const fullPath = join(uploadPath, safeName);
+            if (fs.existsSync(fullPath)) {
+                req.existingFile = `/uploads/users/${safeName}`;
+                return cb(null, false);
+            }
+            cb(null, true);
+        }
+    }))
+    async updateProfileInfo(
+        @Req() req: any,
+        @CurrentUser() user,
+        @Body() payload: UsersPayloadDto,
+        @UploadedFile() file?: Express.Multer.File,
+    ) {
+        const profileImg = file ? `/uploads/users/${file.filename}` : (req.existingFile || '');
+        return await this.userService.updateUser(payload.userData, user.id, profileImg);
     }
 
     // @Roles('Administrador', 'Líder Instructor', 'Instructor')
@@ -74,14 +114,22 @@ export class UsersController {
         }
     }))
     async createUser(
-        @Req() req: any, 
-        @Body() payload: UsersPayloadDto, 
+        @Req() req: any,
+        @Body() payload: UsersPayloadDto,
         @CurrentUser() user,
-        @UploadedFile() file?: Express.Multer.File, 
-        ) {
+        @UploadedFile() file?: Express.Multer.File,
+    ) {
         const profileImg = file ? `/uploads/users/${file.filename}` : (req.existingFile || '');
 
         return await this.userService.createUser(payload.userData, profileImg, user);
+    }
+
+    @Put('/change-password')
+    async changePassword(
+        @CurrentUser() user,
+        @Body() password: UserPassword
+    ) {
+        return await this.userService.updateUserPassword(user, password.oldPassword, password.password);
     }
 
     @Put('/:id')
@@ -115,16 +163,11 @@ export class UsersController {
     }))
     async updateUser(
         @Req() req: any,
-        @Param('id', ParseIntPipe) id: number, 
-        @Body() user: UsersPayloadDto, 
+        @Param('id', ParseIntPipe) id: number,
+        @Body() user: UsersPayloadDto,
         @UploadedFile() file?: Express.Multer.File) {
         const profileImg = file ? `/uploads/users/${file.filename}` : (req.existingFile || '');
         return await this.userService.updateUser(user.userData, id, profileImg);
-    }
-
-    @Put('/change-password')
-    async changePassword(@Body() password: UserPassword) {
-        return await this.userService.updateUserPassword(password.password, password.id);
     }
 
     @Delete('/:id')

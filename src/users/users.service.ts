@@ -81,7 +81,7 @@ export class UsersService {
         }
     }
 
-    async getInfoUser(user: UserTokenDecode) {
+    async getProfileInfo(user: UserTokenDecode) {
         try {
             const userId = user.id;
             if (!userId) {
@@ -91,8 +91,22 @@ export class UsersService {
 
             const userFound = await this.prismaService.users.findUnique({
                 where: { id: userId },
-                include: {
-                    rol: true,
+                select: {
+                    identification: true,
+                    name: true,
+                    lastName: true,
+                    username: true,
+                    email: true,
+                    address: true,
+                    phone: true,
+                    enrollmentDate: true,
+                    birthday: true,
+                    sex: true,
+                    rol: {
+                        select: {
+                            rol: true
+                        }
+                    },
                     dojo: {
                         select: { dojo: true, id: true }
                     },
@@ -387,15 +401,31 @@ export class UsersService {
         }
     }
 
-    async updateUserPassword(password: string, id: number) {
+    async updateUserPassword(user: UserTokenDecode, oldPassword: string, password: string) {
         try {
+            const userRecord = await this.prismaService.users.findUnique({
+                where: { id: user.id },
+            });
+
+            if (!userRecord) {
+                badResponse.message = 'Usuario no encontrado';
+                return badResponse;
+            }
+
+            const isMatch = await bcrypt.compare(oldPassword, userRecord.password);
+            if (!isMatch) {
+                badResponse.message = 'Contraseña actual incorrecta';
+                return badResponse;
+            }
+
+
             const hashed = await bcrypt.hash(password, 10);
             await this.prismaService.users.update({
                 data: {
                     password: hashed,
                 },
                 where: {
-                    id: id,
+                    id: user.id,
                 }
             });
             baseResponse.message = 'Contraseña actualizada correctamente';
