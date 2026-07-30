@@ -121,6 +121,11 @@ export class MarkAttendanceDto {
     userIds!: number[]; // Lista de IDs de alumnos presentes
 }
 
+export class AssignInstructorDto {
+    @IsNumber()
+    userId!: number;
+}
+
 export class DojoImagesDto {
     @IsNumber()
     dojoId!: number;

@@ -1,6 +1,6 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO, ScheduleDTO } from './dojo.dto';
+import { AssignInstructorDto, AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO, ScheduleDTO } from './dojo.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
 import { UserTokenDecode } from '@/users/users.dto';
 import { Prisma } from '@/generated/prisma/client';
@@ -97,7 +97,7 @@ export class DojosService {
 
     private isLiderMaestroOrAdmin(user: UserTokenDecode): boolean {
         return user.roles?.some(r =>
-            r.rol.rol === 'Administrador' || r.rol.rol === 'Lider Maestro'
+            r.rol.rol === 'Administrador' || r.rol.rol === 'Líder Maestro'
         ) ?? false;
     }
 
@@ -141,7 +141,7 @@ export class DojosService {
                     some: {
                         rol: {
                             rol: {
-                                in: ['Líder Instructor', 'Lider Maestro']
+                                in: ['Líder Instructor', 'Líder Maestro']
                             }
                         }
                     }
@@ -257,7 +257,7 @@ export class DojosService {
                         some: {
                             rol: {
                                 rol: {
-                                    in: ['Líder Instructor', 'Instructor', 'Lider Maestro']
+                                    in: ['Líder Instructor', 'Instructor', 'Líder Maestro']
                                 }
                             }
                         }
@@ -701,6 +701,55 @@ export class DojosService {
         }
     }
 
+
+    async assignInstructorRole(data: AssignInstructorDto, user: UserTokenDecode) {
+        try {
+            if (!this.isLiderMaestroOrAdmin(user)) {
+                badResponse.message = 'No tienes permisos para asignar instructores';
+                return badResponse;
+            }
+
+            const findUser = await this.prismaService.users.findUnique({
+                where: { id: data.userId },
+                include: { roles: { include: { rol: true } } },
+            });
+
+            if (!findUser) {
+                badResponse.message = 'Usuario no encontrado';
+                return badResponse;
+            }
+
+            const alreadyInstructor = findUser.roles.some(r => r.rol.rol === 'Instructor');
+            if (alreadyInstructor) {
+                badResponse.message = 'El usuario ya es instructor';
+                return badResponse;
+            }
+
+            const instructorRole = await this.prismaService.roles.findFirst({
+                where: { rol: 'Instructor' },
+            });
+
+            if (!instructorRole) {
+                badResponse.message = 'El rol Instructor no existe en el sistema';
+                return badResponse;
+            }
+
+            await this.prismaService.userRoles.create({
+                data: {
+                    userId: data.userId,
+                    rolId: instructorRole.id,
+                },
+            });
+
+            baseResponse.data = null;
+            baseResponse.message = 'Rol de Instructor asignado correctamente';
+            return baseResponse;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
+            return badResponse;
+        }
+    }
 
     // Images
     async getDojoImages(dojoId: number) {

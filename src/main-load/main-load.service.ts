@@ -40,7 +40,7 @@ export class MainLoadService {
                     { rol: 'Instructor', },
                     { rol: 'Estudiante', },
                     { rol: 'Representante', },
-                    { rol: 'Lider Maestro', },
+                    { rol: 'Líder Maestro', },
                 ],
                 skipDuplicates: true,
             });

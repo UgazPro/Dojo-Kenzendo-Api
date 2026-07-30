@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UploadedFile, UploadedFiles, UseInterceptors, Req } from '@nestjs/common';
 import { DojosService } from './dojos.service';
-import { AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
+import { AssignInstructorDto, AttendanceFilter, DojoDto, DojoImagesDto, MarkAttendanceDto, ScheduleDojoDTO } from './dojo.dto';
 import { FileFieldsInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -209,6 +209,15 @@ export class DojosController {
     @Delete('/images/:id')
     deleteDojoImage(@Param('id', ParseIntPipe) id: number) {
         return this.dojosService.deleteDojoImage(id);
+    }
+
+    // Users
+    @Post('/users/instructor')
+    async assignInstructor(
+        @CurrentUser() user: UserTokenDecode,
+        @Body() data: AssignInstructorDto,
+    ) {
+        return this.dojosService.assignInstructorRole(data, user);
     }
 
     //Attendance

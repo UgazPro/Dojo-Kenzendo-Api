@@ -51,7 +51,7 @@ export class UsersService {
         const where: any = {};
 
         const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
-        const isLiderMaestro = user.roles?.some(r => r.rol.rol === 'Lider Maestro');
+        const isLiderMaestro = user.roles?.some(r => r.rol.rol === 'Líder Maestro');
         if (isAdmin) {
             if (dojoId) {
                 where.dojoId = Number(dojoId);
@@ -159,7 +159,7 @@ export class UsersService {
 
     async getAllInfoByUser(id: number, user: UserTokenDecode) {
         try {
-            const roles = ['Administrador', 'Líder Instructor', 'Instructor', 'Lider Maestro'];
+            const roles = ['Administrador', 'Líder Instructor', 'Instructor', 'Líder Maestro'];
             const findUser = await this.prismaService.users.findUnique({
                 where: { id },
                 select: {

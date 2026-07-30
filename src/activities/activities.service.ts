@@ -374,7 +374,7 @@ export class ActivitiesService {
             );
 
             if (unauthorizedPairs.length > 0) {
-                badResponse.message = 'Algunos estudiantes no tienen postulaciones autorizadas. Deben ser aprobadas por un Lider Maestro primero.';
+                badResponse.message = 'Algunos estudiantes no tienen postulaciones autorizadas. Deben ser aprobadas por un Líder Maestro primero.';
                 return badResponse;
             }
             const currentUserRanks = await this.prismaService.userRanks.findMany({
@@ -508,7 +508,7 @@ export class ActivitiesService {
             };
 
             const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
-            const isLiderMaestro = user.roles?.some(r => r.rol.rol === 'Lider Maestro');
+            const isLiderMaestro = user.roles?.some(r => r.rol.rol === 'Líder Maestro');
             if (isAdmin) {
                 if (dojoId) where.dojoId = dojoId;
             } else if (isLiderMaestro) {
@@ -694,7 +694,7 @@ export class ActivitiesService {
             defaultMinDate.setMonth(defaultMinDate.getMonth() - 8);
 
             const isAdmin = currentUser.roles?.some(r => r.rol.rol === 'Administrador');
-            const isLiderMaestro = currentUser.roles?.some(r => r.rol.rol === 'Lider Maestro');
+            const isLiderMaestro = currentUser.roles?.some(r => r.rol.rol === 'Líder Maestro');
             const canUseExceptions = isAdmin || isLiderMaestro;
             let allowedDojoIds: number[] = [currentUser.dojoId];
             if (isAdmin) {
@@ -861,7 +861,7 @@ export class ActivitiesService {
     async getPendingAuthorizations(user: UserTokenDecode) {
         try {
             const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
-            const isLiderMaestro = user.roles?.some(r => r.rol.rol === 'Lider Maestro');
+            const isLiderMaestro = user.roles?.some(r => r.rol.rol === 'Líder Maestro');
 
             if (!isAdmin && !isLiderMaestro) {
                 badResponse.message = 'No tienes permisos para ver postulaciones pendientes';
@@ -916,7 +916,7 @@ export class ActivitiesService {
     async authorizeAppliedStudents(data: AuthorizeAppliedDto, user: UserTokenDecode) {
         try {
             const canAuthorize = user.roles?.some(r =>
-                r.rol.rol === 'Administrador' || r.rol.rol === 'Lider Maestro'
+                r.rol.rol === 'Administrador' || r.rol.rol === 'Líder Maestro'
             );
             if (!canAuthorize) {
                 badResponse.message = 'No tienes permisos para autorizar postulaciones';
@@ -941,7 +941,7 @@ export class ActivitiesService {
     async rejectAppliedStudents(data: AuthorizeAppliedDto, user: UserTokenDecode) {
         try {
             const canReject = user.roles?.some(r =>
-                r.rol.rol === 'Administrador' || r.rol.rol === 'Lider Maestro'
+                r.rol.rol === 'Administrador' || r.rol.rol === 'Líder Maestro'
             );
             if (!canReject) {
                 badResponse.message = 'No tienes permisos para rechazar postulaciones';
