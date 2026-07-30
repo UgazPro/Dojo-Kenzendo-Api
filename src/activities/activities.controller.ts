@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
-import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedManyStudentsDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
+import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedManyStudentsDto, AppliedStudentDto, AuthorizeAppliedDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -115,8 +115,32 @@ export class ActivitiesController {
     }
 
     @Post('/applied-students')
-    createAppliedStudent(@Body() data: AppliedManyStudentsDto) {
-        return this.activitiesService.createAppliedStudent(data);
+    createAppliedStudent(
+        @CurrentUser() user,
+        @Body() data: AppliedManyStudentsDto,
+    ) {
+        return this.activitiesService.createAppliedStudent(data, user);
+    }
+
+    @Get('/applied-students/pending')
+    getPendingAuthorizations(@CurrentUser() user) {
+        return this.activitiesService.getPendingAuthorizations(user);
+    }
+
+    @Post('/applied-students/authorize')
+    authorizeAppliedStudents(
+        @CurrentUser() user,
+        @Body() data: AuthorizeAppliedDto,
+    ) {
+        return this.activitiesService.authorizeAppliedStudents(data, user);
+    }
+
+    @Post('/applied-students/reject')
+    rejectAppliedStudents(
+        @CurrentUser() user,
+        @Body() data: AuthorizeAppliedDto,
+    ) {
+        return this.activitiesService.rejectAppliedStudents(data, user);
     }
 
     // @Put('/applied-students/:id')

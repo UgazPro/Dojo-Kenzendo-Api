@@ -1,6 +1,6 @@
 import { PrismaService } from '@/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
-import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedManyStudentsDto, AppliedStudentDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
+import { ActivityDto, ActivityFilterDto, ActivityImagesDto, AppliedManyStudentsDto, AppliedStudentDto, AuthorizeAppliedDto, ExamDto, ExamStudentsDto, MarkActivityAttendanceDto } from './activities.dto';
 import { badResponse, baseResponse } from '@/utilities/base.dto';
 import { UserTokenDecode } from '@/users/users.dto';
 import { id } from 'date-fns/locale';
@@ -234,7 +234,7 @@ export class ActivitiesService {
                 return badResponse;
             }
 
-            if (user.rol.rol !== 'Administrador') {
+            if (!user.roles?.some(r => r.rol.rol === 'Administrador')) {
                 badResponse.message = 'No tienes permisos para eliminar esta actividad';
                 return badResponse;
             }
@@ -364,9 +364,19 @@ export class ActivitiesService {
             const getUsersApplied = await this.prismaService.appliedStudents.findMany({
                 where: {
                     OR: examPairs,
+                    authorized: true,
                 },
                 orderBy: { createdAt: 'desc' },
             });
+
+            const unauthorizedPairs = examPairs.filter(pair =>
+                !getUsersApplied.some(a => a.userId === pair.userId && a.martialArtId === pair.martialArtId)
+            );
+
+            if (unauthorizedPairs.length > 0) {
+                badResponse.message = 'Algunos estudiantes no tienen postulaciones autorizadas. Deben ser aprobadas por un Lider Maestro primero.';
+                return badResponse;
+            }
             const currentUserRanks = await this.prismaService.userRanks.findMany({
                 where: {
                     OR: examPairs,
@@ -392,6 +402,9 @@ export class ActivitiesService {
                 return badResponse;
             }
 
+            const penalizedUntilDate = new Date();
+            penalizedUntilDate.setFullYear(penalizedUntilDate.getFullYear() + 1);
+
             await this.prismaService.$transaction([
                 this.prismaService.exams.createMany({
                     data: getUsersApplied.map(item => ({
@@ -404,18 +417,26 @@ export class ActivitiesService {
                     }))
                 }),
                 ...getUsersApplied
-                    .filter(item => examStatusByPair.get(`${item.userId}-${item.martialArtId}`) === 'Aprobado')
-                    .map(item => this.prismaService.userRanks.update({
-                        where: {
-                            userId_martialArtId: {
-                                userId: item.userId,
-                                martialArtId: item.martialArtId,
-                            }
-                        },
-                        data: {
-                            currentRankId: item.ranksId,
+                    .filter(item => {
+                        const status = examStatusByPair.get(`${item.userId}-${item.martialArtId}`);
+                        return status === 'Aprobado' || status === 'AprobadoConPenalizacion';
+                    })
+                    .map(item => {
+                        const status = examStatusByPair.get(`${item.userId}-${item.martialArtId}`);
+                        const updateData: any = { currentRankId: item.ranksId };
+                        if (status === 'AprobadoConPenalizacion') {
+                            updateData.penalizedUntil = penalizedUntilDate;
                         }
-                    })),
+                        return this.prismaService.userRanks.update({
+                            where: {
+                                userId_martialArtId: {
+                                    userId: item.userId,
+                                    martialArtId: item.martialArtId,
+                                }
+                            },
+                            data: updateData,
+                        });
+                    }),
                 this.prismaService.appliedStudents.deleteMany({
                     where: {
                         OR: examPairs,
@@ -470,7 +491,7 @@ export class ActivitiesService {
             }).then(results => results.map(item => ({
                 ...item,
                 currentRank: getCurrentRanksUsers.find(r => r.userId === item.userId && r.martialArtId === item.martialArtId)?.rank || null
-            })));
+            })).sort((a, b) => (a.authorized === b.authorized ? 0 : a.authorized ? 1 : -1)));
             return applied;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -486,10 +507,18 @@ export class ActivitiesService {
                 deleted: false
             };
 
-            if (user.rol.rol !== 'Administrador') {
+            const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
+            const isLiderMaestro = user.roles?.some(r => r.rol.rol === 'Lider Maestro');
+            if (isAdmin) {
+                if (dojoId) where.dojoId = dojoId;
+            } else if (isLiderMaestro) {
+                const children = await this.prismaService.dojos.findMany({
+                    where: { parentDojoId: user.dojoId },
+                    select: { id: true }
+                });
+                where.dojoId = { in: [user.dojoId, ...children.map(d => d.id)] };
+            } else {
                 where.dojoId = user.dojoId;
-            } else if (dojoId) {
-                where.dojoId = dojoId;
             }
 
             const now = new Date();
@@ -564,6 +593,24 @@ export class ActivitiesService {
                 orderBy: { id: 'asc' },
             });
 
+            const userRanks = await this.prismaService.userRanks.findMany({
+                where: {
+                    userId: { in: userIds },
+                    martialArtId: { in: martialArtIds },
+                },
+                select: {
+                    userId: true,
+                    martialArtId: true,
+                    penalizedUntil: true,
+                }
+            });
+
+            const penalizedByUserAndMartialArt = new Map<string, Date | null>();
+            for (const ur of userRanks) {
+                const key = `${ur.userId}-${ur.martialArtId}`;
+                penalizedByUserAndMartialArt.set(key, ur.penalizedUntil);
+            }
+
             const lastExamByUserAndMartialArt = new Map<string, { date: Date; ranksId: number }>();
             for (const exam of exams) {
                 const key = `${exam.userId}-${exam.martialArtId}`;
@@ -590,6 +637,10 @@ export class ActivitiesService {
                     const lastExamDate = lastApprovedExam?.date || null;
                     const hasEnoughEnrollmentTime = student.enrollmentDate <= minDate;
                     const hasEnoughTimeFromLastExam = !lastExamDate || lastExamDate <= minDate;
+
+                    const penalizedUntil = penalizedByUserAndMartialArt.get(key) || null;
+                    const isPenalized = penalizedUntil && penalizedUntil > now;
+
                     const rankInitial = ageUser > 12 ? 2 : 1;
                     const firstRank = firstRankByMartialArt.get(item.martialArtId);
                     const postulationRankId = lastApprovedExam
@@ -602,7 +653,8 @@ export class ActivitiesService {
                         martialArt: item.martialArt.martialArt,
                         lastExamDate,
                         postulationRank,
-                        suggested: hasEnoughEnrollmentTime && hasEnoughTimeFromLastExam,
+                        penalizedUntil: penalizedUntil || null,
+                        suggested: hasEnoughEnrollmentTime && hasEnoughTimeFromLastExam && !isPenalized,
                     };
                 });
 
@@ -630,7 +682,7 @@ export class ActivitiesService {
         }
     }
 
-    async createAppliedStudent(data: AppliedManyStudentsDto) {
+    async createAppliedStudent(data: AppliedManyStudentsDto, currentUser: UserTokenDecode) {
         try {
             if (!data.appliedStudents?.length) {
                 badResponse.message = 'Debe enviar al menos un estudiante para postular.';
@@ -638,14 +690,30 @@ export class ActivitiesService {
             }
 
             const now = new Date();
-            const minDate = new Date(now);
-            minDate.setMonth(minDate.getMonth() - 8);
+            const defaultMinDate = new Date(now);
+            defaultMinDate.setMonth(defaultMinDate.getMonth() - 8);
+
+            const isAdmin = currentUser.roles?.some(r => r.rol.rol === 'Administrador');
+            const isLiderMaestro = currentUser.roles?.some(r => r.rol.rol === 'Lider Maestro');
+            const canUseExceptions = isAdmin || isLiderMaestro;
+            let allowedDojoIds: number[] = [currentUser.dojoId];
+            if (isAdmin) {
+                allowedDojoIds = [];
+            } else if (isLiderMaestro) {
+                const children = await this.prismaService.dojos.findMany({
+                    where: { parentDojoId: currentUser.dojoId },
+                    select: { id: true }
+                });
+                allowedDojoIds = [currentUser.dojoId, ...children.map(d => d.id)];
+            }
 
             const preparedApplications: Array<{
                 activityId: number;
                 userId: number;
                 martialArtId: number;
                 rankId: number;
+                exceptionMonths: boolean;
+                customRankId: number | null;
             }> = [];
 
             for (const item of data.appliedStudents) {
@@ -655,6 +723,15 @@ export class ActivitiesService {
                     badResponse.message = `Usuario con id ${item.userId} no encontrado.`;
                     return badResponse;
                 }
+
+                if (!isAdmin && !allowedDojoIds.includes(findUser.dojoId)) {
+                    badResponse.message = `No tienes permiso para postular al usuario ${findUser.name} ${findUser.lastName}`;
+                    return badResponse;
+                }
+
+                const minDate = item.exceptionMonths && canUseExceptions
+                    ? new Date(now.getFullYear(), now.getMonth() - 6, now.getDate())
+                    : defaultMinDate;
 
                 const ageUser = Math.floor((now.getTime() - findUser.birthday.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
                 const validateEnrollment = findUser.enrollmentDate > minDate;
@@ -683,7 +760,7 @@ export class ActivitiesService {
                     where: {
                         userId: item.userId,
                         martialArtId: item.martialArtId,
-                        status: 'Aprobado',
+                        status: { in: ['Aprobado', 'AprobadoConPenalizacion'] },
                     },
                     orderBy: { createdAt: 'desc' },
                 });
@@ -706,19 +783,28 @@ export class ActivitiesService {
                     return badResponse;
                 }
 
-                //Si es mayor a 12 años, el rango inicial es 2 (Cinturón Blanco Raya Amarillo), si es menor o igual a 12 años, el rango inicial es 1 (Blanco Punta Amarillo)
-                const rankInitial = ageUser > 12 ? 2 : 1;
-
-                //En caso de tener un examen registrado, se asigna al siguiente rango, de lo contrario, se asigna el rango inicial del arte marcial segun la edad del usuario
-                const rankId = findLastExam ? findLastExam.ranksId + 1 : (Number(findFistRankPostulation?.id) + rankInitial) || 1;
+                //Calcular rankId: si customRankId es proporcionado y el usuario tiene permisos, usarlo
+                let rankId: number;
+                if (item.customRankId && canUseExceptions) {
+                    rankId = item.customRankId;
+                } else {
+                    //Si es mayor a 12 años, el rango inicial es 2 (Cinturón Blanco Raya Amarillo), si es menor o igual a 12 años, el rango inicial es 1 (Blanco Punta Amarillo)
+                    const rankInitial = ageUser > 12 ? 2 : 1;
+                    //En caso de tener un examen registrado, se asigna al siguiente rango, de lo contrario, se asigna el rango inicial del arte marcial segun la edad del usuario
+                    rankId = findLastExam ? findLastExam.ranksId + 1 : (Number(findFistRankPostulation?.id) + rankInitial) || 1;
+                }
 
                 preparedApplications.push({
                     activityId: data.activityId,
                     userId: item.userId,
                     martialArtId: item.martialArtId,
                     rankId,
+                    exceptionMonths: !!(item.exceptionMonths && canUseExceptions),
+                    customRankId: item.customRankId && canUseExceptions ? item.customRankId : null,
                 });
             }
+
+            const canAuthorize = isAdmin || isLiderMaestro;
 
             const createdStudents = await this.prismaService.$transaction(
                 preparedApplications.map(item =>
@@ -728,9 +814,15 @@ export class ActivitiesService {
                             userId: item.userId,
                             martialArtId: item.martialArtId,
                             ranksId: item.rankId,
+                            authorized: canAuthorize,
+                            exceptionMonths: item.exceptionMonths,
+                            customRankId: item.customRankId,
                         },
                         select: {
                             id: true,
+                            authorized: true,
+                            exceptionMonths: true,
+                            customRankId: true,
                             user: {
                                 select: {
                                     id: true,
@@ -758,6 +850,115 @@ export class ActivitiesService {
             const martialArts = [...new Set(createdStudents.map(item => item.ranks.martialArt.martialArt))];
             baseResponse.data = createdStudents;
             baseResponse.message = `Estudiantes aplicados correctamente para examenes de ${martialArts.join(' y ')}`;
+            return baseResponse;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
+            return badResponse;
+        }
+    }
+
+    async getPendingAuthorizations(user: UserTokenDecode) {
+        try {
+            const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
+            const isLiderMaestro = user.roles?.some(r => r.rol.rol === 'Lider Maestro');
+
+            if (!isAdmin && !isLiderMaestro) {
+                badResponse.message = 'No tienes permisos para ver postulaciones pendientes';
+                return badResponse;
+            }
+
+            let dojoIds: number[] = [];
+            if (isAdmin) {
+                const dojos = await this.prismaService.dojos.findMany({ select: { id: true } });
+                dojoIds = dojos.map(d => d.id);
+            } else {
+                const children = await this.prismaService.dojos.findMany({
+                    where: { parentDojoId: user.dojoId },
+                    select: { id: true }
+                });
+                dojoIds = [user.dojoId, ...children.map(d => d.id)];
+            }
+
+            const pending = await this.prismaService.appliedStudents.findMany({
+                where: {
+                    authorized: false,
+                    rejectionReason: null,
+                    user: {
+                        dojoId: { in: dojoIds }
+                    }
+                },
+                include: {
+                    activity: {
+                        select: { id: true, name: true, date: true }
+                    },
+                    user: {
+                        select: { id: true, name: true, lastName: true, dojoId: true }
+                    },
+                    martialArt: {
+                        select: { id: true, martialArt: true }
+                    },
+                    ranks: {
+                        select: { id: true, code: true, belt: true }
+                    }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            return pending;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
+            return badResponse;
+        }
+    }
+
+    async authorizeAppliedStudents(data: AuthorizeAppliedDto, user: UserTokenDecode) {
+        try {
+            const canAuthorize = user.roles?.some(r =>
+                r.rol.rol === 'Administrador' || r.rol.rol === 'Lider Maestro'
+            );
+            if (!canAuthorize) {
+                badResponse.message = 'No tienes permisos para autorizar postulaciones';
+                return badResponse;
+            }
+
+            await this.prismaService.appliedStudents.updateMany({
+                where: { id: { in: data.ids } },
+                data: { authorized: true }
+            });
+
+            baseResponse.data = { authorizedIds: data.ids };
+            baseResponse.message = `${data.ids.length} postulaciones autorizadas correctamente`;
+            return baseResponse;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            badResponse.message = message;
+            return badResponse;
+        }
+    }
+
+    async rejectAppliedStudents(data: AuthorizeAppliedDto, user: UserTokenDecode) {
+        try {
+            const canReject = user.roles?.some(r =>
+                r.rol.rol === 'Administrador' || r.rol.rol === 'Lider Maestro'
+            );
+            if (!canReject) {
+                badResponse.message = 'No tienes permisos para rechazar postulaciones';
+                return badResponse;
+            }
+
+            const updated = await this.prismaService.appliedStudents.updateMany({
+                where: { id: { in: data.ids } },
+                data: {
+                    authorized: false,
+                    rejectionReason: data.reason || '',
+                    rejectedAt: new Date(),
+                }
+            });
+
+            baseResponse.data = { rejectedCount: updated.count };
+            baseResponse.message = `${updated.count} postulaciones rechazadas correctamente`;
             return baseResponse;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);

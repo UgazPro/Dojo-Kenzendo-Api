@@ -113,6 +113,24 @@ export class AppliedStudentDto {
 
     @IsNumber()
     userId!: number;
+
+    @IsOptional()
+    @IsNumber()
+    customRankId?: number;
+
+    @IsOptional()
+    @IsBoolean()
+    exceptionMonths?: boolean;
+}
+
+export class AuthorizeAppliedDto {
+    @IsArray()
+    @IsNumber({}, { each: true })
+    ids!: number[];
+
+    @IsOptional()
+    @IsString()
+    reason?: string;
 }
 
 export class ActivityImagesDto {

@@ -14,7 +14,8 @@ export class PaymentsService {
     async getMonthlyPayment(user: UserTokenDecode, dojoId: string) {
         const where: any = {};
 
-        if (user.rol && user.rol.rol !== 'Administrador') {
+        const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
+        if (!isAdmin) {
             where.dojoId = user.dojoId;
         } else {
             if (dojoId) where.dojoId = Number(dojoId);
@@ -73,7 +74,8 @@ export class PaymentsService {
     async getPaymentMethods(user: UserTokenDecode, dojoId: string) {
         const where: any = {};
 
-        if (user.rol && user.rol.rol !== 'Administrador') {
+        const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
+        if (!isAdmin) {
             where.dojoId = user.dojoId;
         } else {
             if (dojoId) where.dojoId = Number(dojoId);
@@ -166,9 +168,10 @@ export class PaymentsService {
             }
         }
 
-        if (!user.rol || user.rol.rol !== 'Administrador') {
+        const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
+        if (!isAdmin) {
             where.paymentMethod = { dojoId: user.dojoId };
-        } else {``
+        } else {
             if (filters?.dojoId) {
                 where.paymentMethod = { dojoId: filters.dojoId };
             }

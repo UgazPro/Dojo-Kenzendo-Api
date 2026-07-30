@@ -87,6 +87,20 @@ export class DojosService {
         return `No se puede ${action} el horario (${item.day} ${item.startTime} - ${item.endTime}) porque ese horario ya esta ocupado para este dojo y arte marcial`;
     }
 
+    async getDojoAndChildrenIds(dojoId: number): Promise<number[]> {
+        const children = await this.prismaService.dojos.findMany({
+            where: { parentDojoId: dojoId },
+            select: { id: true }
+        });
+        return [dojoId, ...children.map(c => c.id)];
+    }
+
+    private isLiderMaestroOrAdmin(user: UserTokenDecode): boolean {
+        return user.roles?.some(r =>
+            r.rol.rol === 'Administrador' || r.rol.rol === 'Lider Maestro'
+        ) ?? false;
+    }
+
     async getDojos(dojoId?: string) {
         const where: any = {};
 
@@ -101,9 +115,13 @@ export class DojosService {
                 lastName: true,
                 profileImg: true,
                 dojoId: true,
-                rol: {
+                roles: {
                     select: {
-                        rol: true
+                        rol: {
+                            select: {
+                                rol: true
+                            }
+                        }
                     }
                 },
                 userRanks: {
@@ -119,8 +137,14 @@ export class DojosService {
                 },
             },
             where: {
-                rol: {
-                    rol: 'Líder Instructor'
+                roles: {
+                    some: {
+                        rol: {
+                            rol: {
+                                in: ['Líder Instructor', 'Lider Maestro']
+                            }
+                        }
+                    }
                 }
             }
         })
@@ -135,6 +159,7 @@ export class DojosService {
                 addressShort: true,
                 logo: true,
                 code: true,
+                parentDojoId: true,
 
                 dojoMartialArts: {
                     include: { martialArt: true }
@@ -142,19 +167,23 @@ export class DojosService {
             }
         });
 
-        return Promise.all(dojos.map(async dojo => ({
-                ...dojo,
-                dojoMartialArts: dojo.dojoMartialArts.map(dma => dma.martialArt),
-                leaderInstructor: users.find(user => user.dojoId === dojo.id),
-                students: await this.prismaService.users.count({
-                    where: {
-                        dojoId: dojo.id,
-                        rol: { rol: 'Estudiante' },
-                        active: true,
-                        deleted: false,
-                    }
-                })
-            })));
+        return Promise.all(dojos.map(async dojo => {
+                const childDojoIds = (await this.getDojoAndChildrenIds(dojo.id)).filter(id => id !== dojo.id);
+                return {
+                    ...dojo,
+                    dojoMartialArts: dojo.dojoMartialArts.map(dma => dma.martialArt),
+                    leaderInstructor: users.find(user => user.dojoId === dojo.id),
+                    childDojos: childDojoIds,
+                    students: await this.prismaService.users.count({
+                        where: {
+                            dojoId: dojo.id,
+                            roles: { some: { rol: { rol: 'Estudiante' } } },
+                            active: true,
+                            deleted: false,
+                        }
+                    })
+                };
+            }));
     }
 
 
@@ -183,6 +212,20 @@ export class DojosService {
                     }
                 },
                 dojoImages: true,
+                childDojos: {
+                    select: {
+                        id: true,
+                        dojo: true,
+                        code: true,
+                    }
+                },
+                parentDojo: {
+                    select: {
+                        id: true,
+                        dojo: true,
+                        code: true,
+                    }
+                }
             }
         });
 
@@ -193,11 +236,14 @@ export class DojosService {
             };
         }
 
+        const childDojoIds = dojoInfo.childDojos.map(d => d.id);
+        const allDojoIds = [dojoInfo.id, ...childDojoIds];
+
         const [totalStudents, usersByRole] = await Promise.all([
             this.prismaService.users.count({
                 where: {
-                    dojoId: dojoInfo.id,
-                    rol: { rol: 'Estudiante' },
+                    dojoId: { in: allDojoIds },
+                    roles: { some: { rol: { rol: 'Estudiante' } } },
                     active: true,
                     deleted: false,
                 }
@@ -207,9 +253,13 @@ export class DojosService {
                     dojoId: dojoInfo.id,
                     active: true,
                     deleted: false,
-                    rol: {
-                        rol: {
-                            in: ['Líder Instructor', 'Instructor']
+                    roles: {
+                        some: {
+                            rol: {
+                                rol: {
+                                    in: ['Líder Instructor', 'Instructor', 'Lider Maestro']
+                                }
+                            }
                         }
                     }
                 },
@@ -232,14 +282,30 @@ export class DojosService {
                             }
                         }
                     },
-                    rol: {
+                    roles: {
                         select: {
-                            rol: true,
+                            rol: {
+                                select: {
+                                    rol: true,
+                                }
+                            }
                         }
                     }
                 }
             })
         ]);
+
+        const studentsByDojo = await Promise.all(allDojoIds.map(async dojoId => {
+            const count = await this.prismaService.users.count({
+                where: {
+                    dojoId,
+                    roles: { some: { rol: { rol: 'Estudiante' } } },
+                    active: true,
+                    deleted: false,
+                }
+            });
+            return { dojoId, count };
+        }));
 
         const masters = [...usersByRole].sort((a, b) => {
             const maxRankA = Math.max(0, ...a.userRanks.map(userRank => userRank.rank?.id ?? 0));
@@ -256,6 +322,7 @@ export class DojosService {
             ...dojoInfo,
             dojoMartialArts: dojoInfo.dojoMartialArts.map(dma => dma.martialArt),
             totalStudents,
+            studentsByDojo,
             masters,
         };
     }
@@ -263,7 +330,7 @@ export class DojosService {
     async getMartialArts(user: UserTokenDecode) {
         const where: any = {};
 
-        if (user.rol.rol !== 'Administrador') {
+        if (!user.roles?.some(r => r.rol.rol === 'Administrador')) {
             where.dojoMartialArts = {
                 some: {
                     dojoId: user.dojoId
@@ -323,7 +390,8 @@ export class DojosService {
                     founded: dojoData.founded,
                     slogan: dojoData.slogan,
                     translate: dojoData.translate,
-                    socialMedia: this.toSocialMediaJson(dojoData.socialMedia)
+                    socialMedia: this.toSocialMediaJson(dojoData.socialMedia),
+                    parentDojoId: dojoData.parentDojoId ?? null,
                 }
             });
             await this.prismaService.dojoImages.create({
@@ -370,7 +438,8 @@ export class DojosService {
                     founded: dojoData.founded,
                     slogan: dojoData.slogan,
                     translate: dojoData.translate,
-                    socialMedia: this.toSocialMediaJson(dojoData.socialMedia)
+                    socialMedia: this.toSocialMediaJson(dojoData.socialMedia),
+                    parentDojoId: dojoData.parentDojoId ?? null,
                 }
             });
             if (banner) {
@@ -444,7 +513,7 @@ export class DojosService {
     async getClassAttendanceStatus(dojoId: number, scheduleId: number, date: Date) {
         // 1. Obtener todos los alumnos que pertenecen a ese dojo
         const allStudents = await this.prismaService.users.findMany({
-            where: { dojoId, rol: { rol: 'Estudiante' }, active: true },
+            where: { dojoId, roles: { some: { rol: { rol: 'Estudiante' } } }, active: true },
             select: { id: true, name: true, lastName: true }
         });
 
@@ -709,7 +778,8 @@ export class DojosService {
         const today = new Date();
         today.setHours(0, 0, 0, 0); // Normalizamos a inicio del día para evitar duplicados diarios
 
-        const dojoId = user.rol.rol === 'Administrador' ? data.dojoId : user.dojoId; // Si es admin, puede marcar para cualquier dojo, si no, solo para su dojo
+        const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
+        const dojoId = isAdmin ? data.dojoId : user.dojoId;
 
         // Creamos los registros en una transacción de base de datos
         const attendanceRecords = userIds.map(userId => ({

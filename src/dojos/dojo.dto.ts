@@ -60,6 +60,11 @@ export class DojoDto {
     @ValidateNested({ each: true })
     @Type(() => SocialMediaDto)
     socialMedia?: SocialMediaDto[];
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    parentDojoId?: number;
 }
 
 export class ScheduleDojoDTO {

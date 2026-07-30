@@ -14,7 +14,11 @@ export class UsersService {
 
     private buildUserResponseInclude() {
         return {
-            rol: true,
+            roles: {
+                include: {
+                    rol: true
+                }
+            },
             dojo: {
                 select: {
                     dojo: true,
@@ -46,12 +50,20 @@ export class UsersService {
     ) {
         const where: any = {};
 
-        if (user.rol && user.rol.rol !== 'Administrador') {
-            where.dojoId = user.dojoId;
-        } else {
+        const isAdmin = user.roles?.some(r => r.rol.rol === 'Administrador');
+        const isLiderMaestro = user.roles?.some(r => r.rol.rol === 'Lider Maestro');
+        if (isAdmin) {
             if (dojoId) {
                 where.dojoId = Number(dojoId);
             }
+        } else if (isLiderMaestro) {
+            const childDojos = await this.prismaService.dojos.findMany({
+                where: { parentDojoId: user.dojoId },
+                select: { id: true }
+            });
+            where.dojoId = { in: [user.dojoId, ...childDojos.map(d => d.id)] };
+        } else {
+            where.dojoId = user.dojoId;
         }
 
         if (userId) {
@@ -102,10 +114,14 @@ export class UsersService {
                     enrollmentDate: true,
                     birthday: true,
                     sex: true,
-                    rol: {
+                    roles: {
                         select: {
-                            id: true,
-                            rol: true
+                            rol: {
+                                select: {
+                                    id: true,
+                                    rol: true
+                                }
+                            }
                         }
                     },
                     dojo: {
@@ -143,7 +159,7 @@ export class UsersService {
 
     async getAllInfoByUser(id: number, user: UserTokenDecode) {
         try {
-            const roles = ['Administrador', 'Líder Instructor', 'Instructor'];
+            const roles = ['Administrador', 'Líder Instructor', 'Instructor', 'Lider Maestro'];
             const findUser = await this.prismaService.users.findUnique({
                 where: { id },
                 select: {
@@ -157,7 +173,8 @@ export class UsersService {
                 return badResponse;
             }
 
-            if (findUser?.dojoId !== user.dojoId && !roles.includes(user.rol.rol)) {
+            const userRoleNames = user.roles?.map(r => r.rol.rol) ?? [];
+            if (findUser?.dojoId !== user.dojoId && !userRoleNames.some(r => roles.includes(r))) {
                 badResponse.message = 'No tienes permiso para ver este usuario';
                 return badResponse;
             }
@@ -309,11 +326,7 @@ export class UsersService {
 
     async getRoles(user: UserTokenDecode) {
         try {
-            const roles = await this.prismaService.roles.findMany({
-                where: {
-                    id: { gt: user.rolId },
-                }
-            });
+            const roles = await this.prismaService.roles.findMany();
             return roles;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -330,11 +343,7 @@ export class UsersService {
                 martialArt,
                 ranks,
             ] = await Promise.all([
-                this.prismaService.roles.findMany({
-                    where: {
-                        id: { gt: user.rolId },
-                    }
-                }),
+                this.prismaService.roles.findMany(),
                 this.prismaService.dojos.findMany({
                     select: { id: true, dojo: true }
                 }),
@@ -359,7 +368,8 @@ export class UsersService {
 
     async createUser(user: UsersDTO, profileImg: string, currentUser: UserTokenDecode) {
         try {
-            const dojoId = currentUser.rol.rol === 'Administrador' ? user.dojoId : currentUser.dojoId;
+            const isAdmin = currentUser.roles?.some(r => r.rol.rol === 'Administrador');
+            const dojoId = isAdmin ? user.dojoId : currentUser.dojoId;
             const hashed = await bcrypt.hash(user.identification, 12);
             const userCreated = await this.prismaService.users.create({
                 data: {
@@ -373,12 +383,14 @@ export class UsersService {
                     phone: user.phone,
                     sex: user.sex,
                     dojoId: dojoId,
-                    rolId: user.rolId,
                     birthday: user.birthday,
                     profileImg: profileImg,
                     active: true,
                     deleted: false,
                     enrollmentDate: user.enrollmentDate,
+                    roles: {
+                        create: user.rolesIds.map(rolId => ({ rolId })),
+                    },
                 },
                 include: this.buildUserResponseInclude(),
             });

@@ -37,7 +37,7 @@ export class AuthService {
       let findUser = await this.prismaService.users.findFirst({
         where: { email },
         include: {
-          rol: true,
+          roles: { include: { rol: true } },
           dojo: {
             select: {
               id: true,
@@ -59,24 +59,24 @@ export class AuthService {
             name: name as string,
             lastName: '',
             username: name as string,
-            password: await bcrypt.hash(googleId as string, 12), // contraseña temporal con hash
+            password: await bcrypt.hash(googleId as string, 12),
             profileImg: picture as string,
 
-            //Datos a solicitar posteriormente
             identification: '',
             address: '',
             phone: '',
             birthday: new Date('2000-01-01'),
             dojoId: 1,
             enrollmentDate: new Date(),
-            //
 
             deleted: false,
             active: true,
-            rolId: roleId?.id as number,
+            roles: {
+              create: { rolId: roleId?.id as number },
+            },
           },
           include: {
-            rol: true,
+            roles: { include: { rol: true } },
             dojo: {
               select: {
                 id: true,
@@ -129,7 +129,7 @@ export class AuthService {
           username: credentials.username,
         },
         include: {
-          rol: true,
+          roles: { include: { rol: true } },
           dojo: {
             select: {
               id: true,

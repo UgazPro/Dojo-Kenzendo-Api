@@ -19,12 +19,16 @@ export class UsersDTO {
     address!: string;
     @IsString()
     phone!: string;
-    @Type(() => Number)
     @IsNumber()
     dojoId!: number;
+    @Transform(({ value }) => {
+        if (typeof value === 'string') return JSON.parse(value);
+        return value;
+    })
+    @IsArray()
+    @IsNumber({}, { each: true })
     @Type(() => Number)
-    @IsNumber()
-    rolId!: number;
+    rolesIds!: number[];
     @Transform(({ value }) => new Date(value))
     @IsDate()
     birthday!: Date;
@@ -76,6 +80,12 @@ export class UsersPayloadDto {
 }
 
 
+export interface UserRoleInToken {
+    userId: number;
+    rolId: number;
+    rol: Rol;
+}
+
 export interface UserTokenDecode {
     id:             number;
     identification: string;
@@ -87,14 +97,13 @@ export interface UserTokenDecode {
     phone:          string;
     sex:            string;
     dojoId:         number;
-    rolId:          number;
     birthday:       Date;
     profileImg:     string;
     active:         boolean;
     deleted:        boolean;
     createdAt:      Date;
     enrollmentDate: Date;
-    rol:            Rol;
+    roles:          UserRoleInToken[];
     dojo:           Dojo;
     iat:            number;
     exp:            number;

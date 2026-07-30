@@ -30,6 +30,10 @@ model Dojos {
 
   socialMedia Json @default("[]")
 
+  parentDojoId Int?
+  parentDojo   Dojos?  @relation("DojoHierarchy", fields: [parentDojoId], references: [id])
+  childDojos   Dojos[] @relation("DojoHierarchy")
+
   createdAt       DateTime          @default(now())
   DojoAttendance  DojoAttendance[]
   PaymentMethods  PaymentMethods[]
@@ -143,7 +147,6 @@ model Users {
   phone              String
   sex                String               @default("Masculino")
   dojoId             Int
-  rolId              Int
   birthday           DateTime
   profileImg         String
   active             Boolean
@@ -158,21 +161,22 @@ model Users {
   representedUsers   Representatives[]    @relation("Representative")
   student            Representatives[]    @relation("Students")
   dojo               Dojos                @relation(fields: [dojoId], references: [id])
-  rol                Roles                @relation(fields: [rolId], references: [id])
   userRanks          UserRanks[]
   dojoAttendances    DojoAttendance[]
   directives         Directive[]
+  roles              UserRoles[]
 }
 
 model UserRanks {
-  id            Int         @id @default(autoincrement())
-  userId        Int
-  martialArtId  Int
-  currentRankId Int // Apunta al último rango obtenido en esa arte
-  updatedAt     DateTime    @updatedAt
-  user          Users       @relation(fields: [userId], references: [id])
-  martialArt    MartialArts @relation(fields: [martialArtId], references: [id])
-  rank          Ranks       @relation(fields: [currentRankId], references: [id])
+  id             Int         @id @default(autoincrement())
+  userId         Int
+  martialArtId   Int
+  currentRankId  Int // Apunta al último rango obtenido en esa arte
+  penalizedUntil DateTime?
+  updatedAt      DateTime    @updatedAt
+  user           Users       @relation(fields: [userId], references: [id])
+  martialArt     MartialArts @relation(fields: [martialArtId], references: [id])
+  rank           Ranks       @relation(fields: [currentRankId], references: [id])
 
   @@unique([userId, martialArtId]) // Un usuario solo tiene un registro por arte marcial
 }
@@ -188,7 +192,16 @@ model Representatives {
 model Roles {
   id    Int     @id @default(autoincrement())
   rol   String
-  Users Users[]
+  users UserRoles[]
+}
+
+model UserRoles {
+  userId Int
+  rolId  Int
+  user   Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rol    Roles @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+  @@id([userId, rolId])
 }
 
 model Directive {
@@ -281,19 +294,25 @@ enum ExamStatus {
   Pendiente
   Aprobado
   Reprobado
+  AprobadoConPenalizacion
 }
 
 model AppliedStudents {
-  id           Int         @id @default(autoincrement())
-  martialArtId Int
-  userId       Int
-  ranksId      Int
-  activityId   Int
-  activity     Activities  @relation(fields: [activityId], references: [id])
-  martialArt   MartialArts @relation(fields: [martialArtId], references: [id])
-  ranks        Ranks       @relation(fields: [ranksId], references: [id])
-  user         Users       @relation(fields: [userId], references: [id])
-  createdAt    DateTime    @default(now())
+  id              Int         @id @default(autoincrement())
+  martialArtId    Int
+  userId          Int
+  ranksId         Int
+  activityId      Int
+  authorized      Boolean     @default(false)
+  exceptionMonths Boolean     @default(false)
+  customRankId    Int?
+  rejectionReason String?
+  rejectedAt      DateTime?
+  activity        Activities  @relation(fields: [activityId], references: [id])
+  martialArt      MartialArts @relation(fields: [martialArtId], references: [id])
+  ranks           Ranks       @relation(fields: [ranksId], references: [id])
+  user            Users       @relation(fields: [userId], references: [id])
+  createdAt       DateTime    @default(now())
 }
 
 //--------------------//------Payments-------//--------------------//
