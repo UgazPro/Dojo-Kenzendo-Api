@@ -36,11 +36,11 @@ export class MainLoadService {
             await this.prismaService.roles.createMany({
                 data: [
                     { rol: 'Administrador', },
+                    { rol: 'Líder Maestro', },
                     { rol: 'Líder Instructor', },
                     { rol: 'Instructor', },
                     { rol: 'Estudiante', },
                     { rol: 'Representante', },
-                    { rol: 'Líder Maestro', },
                 ],
                 skipDuplicates: true,
             });
@@ -163,6 +163,15 @@ export class MainLoadService {
                         deleted: false,
                         enrollmentDate: new Date('2020-01-01')
                     }
+                ],
+                skipDuplicates: true,
+            });
+
+            await this.prismaService.userRoles.createMany({
+                data: [
+                    { userId: 1, rolId: 1 },
+                    { userId: 2, rolId: 2 },
+                    { userId: 3, rolId: 5 },
                 ],
                 skipDuplicates: true,
             });
