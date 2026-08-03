@@ -119,6 +119,7 @@ export class DojosService {
                     select: {
                         rol: {
                             select: {
+                                id: true,
                                 rol: true
                             }
                         }
@@ -147,7 +148,12 @@ export class DojosService {
                     }
                 }
             }
-        })
+        }).then(user => user.map(us => {
+            return {
+                ...us,
+                roles: us?.roles.map(role => ({ rol: role.rol.rol, id: role.rol.id })) || [],
+            }
+        }));
 
         const dojos = await this.prismaService.dojos.findMany({
             where,
@@ -168,22 +174,22 @@ export class DojosService {
         });
 
         return Promise.all(dojos.map(async dojo => {
-                const childDojoIds = (await this.getDojoAndChildrenIds(dojo.id)).filter(id => id !== dojo.id);
-                return {
-                    ...dojo,
-                    dojoMartialArts: dojo.dojoMartialArts.map(dma => dma.martialArt),
-                    leaderInstructor: users.find(user => user.dojoId === dojo.id),
-                    childDojos: childDojoIds,
-                    students: await this.prismaService.users.count({
-                        where: {
-                            dojoId: dojo.id,
-                            roles: { some: { rol: { rol: 'Estudiante' } } },
-                            active: true,
-                            deleted: false,
-                        }
-                    })
-                };
-            }));
+            const childDojoIds = (await this.getDojoAndChildrenIds(dojo.id)).filter(id => id !== dojo.id);
+            return {
+                ...dojo,
+                dojoMartialArts: dojo.dojoMartialArts.map(dma => dma.martialArt),
+                leaderInstructor: users.find(user => user.dojoId === dojo.id),
+                childDojos: childDojoIds,
+                students: await this.prismaService.users.count({
+                    where: {
+                        dojoId: dojo.id,
+                        roles: { some: { rol: { rol: 'Estudiante' } } },
+                        active: true,
+                        deleted: false,
+                    }
+                })
+            };
+        }));
     }
 
 
@@ -286,13 +292,19 @@ export class DojosService {
                         select: {
                             rol: {
                                 select: {
+                                    id: true,
                                     rol: true,
                                 }
                             }
                         }
                     }
                 }
-            })
+            }).then(user => user.map(us => {
+                return {
+                    ...us,
+                    roles: us?.roles.map(role => ({ rol: role.rol.rol, id: role.rol.id })) || [],
+                }
+            }))
         ]);
 
         const studentsByDojo = await Promise.all(allDojoIds.map(async dojoId => {

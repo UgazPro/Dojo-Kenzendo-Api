@@ -138,6 +138,12 @@ export class AuthService {
             }
           },
         },
+      }).then(user => {
+        return {
+          ...user,
+          roles: user?.roles.map(role => ({ rol: role.rol.rol, id: role.rol.id })) || [],
+          password: user?.password || '',
+        }
       });
 
       if (!findUser) {
@@ -166,7 +172,7 @@ export class AuthService {
 
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-            badResponse.message = message;
+      badResponse.message = message;
       return badResponse;
     }
   }

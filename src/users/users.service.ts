@@ -84,7 +84,13 @@ export class UsersService {
                 orderBy: {
                     id: 'asc',
                 }
-            });
+            }).then(user => user.map(us => {
+                let { password, ...userWithoutPassword } = us;
+                return {
+                    ...userWithoutPassword,
+                    roles: us?.roles.map(role => ({ rol: role.rol.rol, id: role.rol.id })) || [],
+                }
+            }));
             return users;
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
