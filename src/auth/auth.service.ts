@@ -46,47 +46,53 @@ export class AuthService {
             }
           },
         },
+      }).then(user => {
+        return {
+          ...user,
+          roles: user?.roles.map(role => ({ rol: role.rol.rol, id: role.rol.id })) || [],
+          password: user?.password || '',
+        }
       });
 
-      const roleId = await this.prismaService.roles.findFirst({
-        where: { rol: 'Estudiante' },
-      })
+      // const roleId = await this.prismaService.roles.findFirst({
+      //   where: { rol: 'Estudiante' },
+      // })
 
-      if (!findUser) {
-        findUser = await this.prismaService.users.create({
-          data: {
-            email: email as string,
-            name: name as string,
-            lastName: '',
-            username: name as string,
-            password: await bcrypt.hash(googleId as string, 12),
-            profileImg: picture as string,
+      // if (!findUser) {
+      //   findUser = await this.prismaService.users.create({
+      //     data: {
+      //       email: email as string,
+      //       name: name as string,
+      //       lastName: '',
+      //       username: name as string,
+      //       password: await bcrypt.hash(googleId as string, 12),
+      //       profileImg: picture as string,
 
-            identification: '',
-            address: '',
-            phone: '',
-            birthday: new Date('2000-01-01'),
-            dojoId: 1,
-            enrollmentDate: new Date(),
+      //       identification: '',
+      //       address: '',
+      //       phone: '',
+      //       birthday: new Date('2000-01-01'),
+      //       dojoId: 1,
+      //       enrollmentDate: new Date(),
 
-            deleted: false,
-            active: true,
-            roles: {
-              create: { rolId: roleId?.id as number },
-            },
-          },
-          include: {
-            roles: { include: { rol: true } },
-            dojo: {
-              select: {
-                id: true,
-                dojo: true,
-                code: true,
-              }
-            },
-          },
-        });
-      }
+      //       deleted: false,
+      //       active: true,
+      //       roles: {
+      //         create: { rolId: roleId?.id as number },
+      //       },
+      //     },
+      //     include: {
+      //       roles: { include: { rol: true } },
+      //       dojo: {
+      //         select: {
+      //           id: true,
+      //           dojo: true,
+      //           code: true,
+      //         }
+      //       },
+      //     },
+      //   });
+      // }
 
       let { password, ...user } = findUser;
 
