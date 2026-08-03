@@ -131,7 +131,7 @@ export class UsersService {
                         }
                     },
                     dojo: {
-                        select: { dojo: true, id: true }
+                        select: { dojo: true, id: true, code: true }
                     },
                     userRanks: {
                         select: {
