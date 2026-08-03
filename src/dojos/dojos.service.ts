@@ -298,7 +298,7 @@ export class DojosService {
                             }
                         }
                     }
-                }
+                },
             }).then(user => user.map(us => {
                 return {
                     ...us,
@@ -320,8 +320,14 @@ export class DojosService {
         }));
 
         const masters = [...usersByRole].sort((a, b) => {
+            const roleIdA = Math.min(...a.roles.map(role => role.id ?? Number.MAX_SAFE_INTEGER));
+            const roleIdB = Math.min(...b.roles.map(role => role.id ?? Number.MAX_SAFE_INTEGER));
             const maxRankA = Math.max(0, ...a.userRanks.map(userRank => userRank.rank?.id ?? 0));
             const maxRankB = Math.max(0, ...b.userRanks.map(userRank => userRank.rank?.id ?? 0));
+
+            if (roleIdA !== roleIdB) {
+                return roleIdA - roleIdB;
+            }
 
             if (maxRankA !== maxRankB) {
                 return maxRankB - maxRankA;
